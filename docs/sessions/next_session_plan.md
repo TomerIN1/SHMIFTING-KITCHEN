@@ -23,6 +23,7 @@ A follow-up visual QA pass fixed two things found by looking at rendered screens
 
 - the allergen chip on the recipe detail page printed the raw key (`legumes`) instead of the Hebrew label — it was missing `allergenLabel()`
 - operational numerals were set in Suez One, whose zero and ₪ glyph read as Hebrew letters; `₪0` looked like a word. All HQ numerals now use the functional face (see the typography note in `project_summary.md`)
+- **Kitchen HQ had no way out.** The header reused the member `UserBadge`, which renders a "מטבח HQ" link — inside HQ that pointed at the page you were already on, so the only route back to the camp side was editing the URL. `UserBadge` is now context-aware. Sign-out also picked up its own `exit` glyph, because it had been sharing the `arrow` shape with the new back link.
 
 ---
 

@@ -35,7 +35,8 @@ export type GlyphName =
   | "star"
   | "cross"
   | "pencil"
-  | "print";
+  | "print"
+  | "exit";
 
 const PATHS: Record<GlyphName, React.ReactNode> = {
   check: <path d="M4 12.6 L8.8 17.4 L20 5.6" />,
@@ -138,6 +139,16 @@ const PATHS: Record<GlyphName, React.ReactNode> = {
       <path d="M6.6 9.4 L6.5 3.4 L17.5 3.3 L17.6 9.4" />
       <path d="M3.4 9.4 L20.7 9.3 L20.6 16.6 L17.6 16.6 L17.5 20.7 L6.6 20.8 L6.5 16.6 L3.4 16.6 Z" />
       <path d="M9.4 13.6 L14.7 13.5" />
+    </>
+  ),
+  /* A doorway with someone leaving through it. Distinct from `arrow`, which
+     means "go back" — signing out and navigating back must never share a
+     shape sitting side by side in the same header. */
+  exit: (
+    <>
+      <path d="M13.4 3.4 L4.6 3.6 L4.4 20.4 L13.4 20.6" />
+      <path d="M10.2 12 L20.6 11.9" />
+      <path d="M17.2 8.4 L20.8 11.95 L17.3 15.6" />
     </>
   ),
 };

@@ -130,6 +130,8 @@ Visual grammar, expressed as utilities: `shm-outline` (2.5px ink border), `shm-l
 
 **The one exception in HQ**: LOCK THE KITCHEN is allowed to be a poster (Design Book §71).
 
+**Crossing between the two experiences.** `UserBadge` takes a `context` prop (`"member"` | `"hq"`) and shows the door to the *other* side: the camp header offers "מטבח HQ" to admins, the HQ header offers "חזרה לקמפ" to everyone. Both are needed — the Kitchen Lead is also a camp member with a profile, votes and shifts, so they move between the two sides constantly. Pass `context="hq"` in `app/hq/layout.tsx`; the default is `"member"`.
+
 ### Artwork
 21 assets generated with `gpt-image-1` (`scripts/generate-assets.mjs`), each carrying the full Shmifting visual contract in its prompt (Design Book §55). Optimised to WebP. The originals are archived in `public/assets/original/` (gitignored).
 

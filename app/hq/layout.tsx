@@ -99,7 +99,7 @@ export default async function HqLayout({ children }: LayoutProps<"/hq">) {
               </span>
             )}
 
-            <UserBadge user={user} />
+            <UserBadge user={user} context="hq" />
           </div>
         </div>
       </header>
