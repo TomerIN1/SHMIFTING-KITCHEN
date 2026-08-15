@@ -11,7 +11,7 @@ import { newId } from "../lib/utils";
    One round. Twelve evenings, each a whole night with its menu already
    written. Every member gets as many flames as the camp has dinners and can
    spend at most one on any night — so a vote is not an allocation puzzle, it
-   is the sentence "these are my five evenings". Count the flames and you have
+   is the sentence "these are my evenings". Count the flames and you have
    the menu; there is nothing left to interpret.
 
    That is the whole design. Two earlier attempts were more clever and both
@@ -208,7 +208,7 @@ const EVENINGS: Evening[] = [
 
 /* How many flames each member gets. One per evening the camp will cook, so
    voting reads as "these are my nights" rather than as a budget. */
-const NIGHTS_TO_COOK = 5;
+const NIGHTS_TO_COOK = 6;
 
 async function main() {
   const reset = process.argv.includes("--reset");
