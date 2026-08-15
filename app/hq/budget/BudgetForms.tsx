@@ -9,8 +9,9 @@ import { money } from "@/lib/utils";
 
 const EMPTY: BudgetState = {};
 
-export function BudgetSettings({ perPerson, diners, dinersOverride, currency, locked }: {
+export function BudgetSettings({ perPerson, budgetTotal, diners, dinersOverride, currency, locked }: {
   perPerson: number;
+  budgetTotal: number | null;
   diners: number;
   dinersOverride: number | null;
   currency: string;
@@ -31,10 +32,30 @@ export function BudgetSettings({ perPerson, diners, dinersOverride, currency, lo
 
   return (
     <form action={action} className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block">
           <span className="mb-1 block text-[12px] text-cream-dim">
-            תקציב לאדם
+            תקציב כולל למטבח
+          </span>
+          {/* What finance actually hands down. When it is filled it is the
+              authority and the per-person figure is derived from it. */}
+          <ToolInput
+            type="number"
+            name="budgetTotal"
+            min={0}
+            step="1"
+            defaultValue={budgetTotal ?? ""}
+            placeholder="מה שהכספים נתנו"
+          />
+          <span className="mt-1 block text-[11.5px] text-cream-dim">
+            {budgetTotal
+              ? "זה הסכום הקובע. לאדם מחושב ממנו."
+              : "ריק = מחושב מהתקציב לאדם."}
+          </span>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[12px] text-cream-dim">
+            או: תקציב לאדם
           </span>
           <ToolInput
             type="number"
@@ -43,6 +64,9 @@ export function BudgetSettings({ perPerson, diners, dinersOverride, currency, lo
             step="1"
             defaultValue={perPerson}
           />
+          <span className="mt-1 block text-[11.5px] text-cream-dim">
+            {budgetTotal ? "לא בשימוש כרגע." : "משמש כשאין סכום כולל."}
+          </span>
         </label>
         <label className="block">
           <span className="mb-1 block text-[12px] text-cream-dim">

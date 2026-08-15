@@ -35,6 +35,8 @@ export const HQ_NAV: Omit<HqNavItem, "alerts">[] = [
   { href: "/hq/recipes", label: "מתכונים", glyph: "pot" },
   { href: "/hq/shifts", label: "משמרות", glyph: "clock" },
   { href: "/hq/shopping", label: "קניות", glyph: "cart" },
+  /* Sits beside shopping and before budget: the other half of the money. */
+  { href: "/hq/equipment", label: "ציוד", glyph: "pot" },
   { href: "/hq/budget", label: "תקציב", glyph: "coin" },
   { href: "/hq/readiness", label: "מוכנות", glyph: "check" },
   { href: "/hq/pack", label: "חבילת המטבח", glyph: "print" },

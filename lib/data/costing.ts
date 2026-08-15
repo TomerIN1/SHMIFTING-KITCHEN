@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { voteRounds } from "@/lib/db/schema";
 import { scaleRecipe } from "@/lib/domain/scaling";
 import { defaultDiners, getSettings } from "./camp";
+import { getEquipmentSummary } from "./equipment";
+import { resolveBudget } from "@/lib/domain/budget";
 import { getOptionDishes } from "./recipes";
 
 /* ============================================================================
@@ -96,6 +98,11 @@ export interface RoundProjection {
   /* Null when finance has not given a number yet. Everything above is still
      true and useful without it. */
   budgetTotal: number | null;
+  /* The pot minus the kit. Equipment comes out of the same money, so the food
+     ceiling is what is left after the fridge and the gas — comparing a menu
+     against the whole budget would quietly promise money already spent. */
+  equipmentCost: number;
+  foodCeiling: number | null;
   budgetPerHead: number | null;
   remaining: number | null;
   overBudget: boolean;
@@ -109,7 +116,11 @@ export const getRoundProjection = cache(
     });
     if (!round) return null;
 
-    const [diners, camp] = await Promise.all([defaultDiners(), getSettings()]);
+    const [diners, camp, equipment] = await Promise.all([
+      defaultDiners(),
+      getSettings(),
+      getEquipmentSummary(),
+    ]);
 
     const scored = round.options.map((option) => ({
       id: option.id,
@@ -138,8 +149,16 @@ export const getRoundProjection = cache(
     const total = leading.reduce((s, e) => s + e.cost.total, 0);
     const unpriced = leading.filter((e) => e.cost.costed === 0).length;
 
-    const budgetTotal =
-      camp.budgetPerPerson > 0 ? camp.budgetPerPerson * diners : null;
+    /* One resolution shared with the budget screen, so the two never disagree
+       about whether a ceiling exists. */
+    const ceiling = resolveBudget({
+      budgetTotal: camp.budgetTotal,
+      budgetPerPerson: camp.budgetPerPerson,
+      diners,
+    });
+    const budgetTotal = ceiling.total;
+    const foodCeiling =
+      budgetTotal === null ? null : budgetTotal - equipment.projected;
 
     return {
       nights,
@@ -150,9 +169,12 @@ export const getRoundProjection = cache(
       perHead: diners > 0 ? total / diners : 0,
       unpriced,
       budgetTotal,
-      budgetPerHead: budgetTotal !== null ? camp.budgetPerPerson : null,
-      remaining: budgetTotal !== null ? budgetTotal - total : null,
-      overBudget: budgetTotal !== null && total > budgetTotal,
+      equipmentCost: equipment.projected,
+      foodCeiling,
+      budgetPerHead:
+        foodCeiling !== null && diners > 0 ? foodCeiling / diners : null,
+      remaining: foodCeiling !== null ? foodCeiling - total : null,
+      overBudget: foodCeiling !== null && total > foodCeiling,
     };
   },
 );

@@ -37,6 +37,8 @@ export function Projection({
     perHead,
     unpriced,
     budgetTotal,
+    equipmentCost,
+    foodCeiling,
     budgetPerHead,
     remaining,
     overBudget,
@@ -82,7 +84,7 @@ export function Projection({
               </p>
             </div>
 
-            {budgetTotal === null ? (
+            {foodCeiling === null ? (
               /* No ceiling yet. Say what to do with the number rather than
                  leaving a blank where the comparison should be. */
               <div className="max-w-xs">
@@ -101,7 +103,7 @@ export function Projection({
             ) : (
               <div>
                 <p className="text-[12px] text-cream-dim">
-                  מול תקציב של {money(budgetPerHead ?? 0, currency)} לאדם
+                  מול {money(foodCeiling ?? 0, currency)} שנשארו לאוכל
                 </p>
                 <p
                   className={cn(
@@ -113,8 +115,9 @@ export function Projection({
                   {money(Math.abs(remaining ?? 0), currency)}
                 </p>
                 <p className="mt-0.5 text-[12.5px] text-cream-dim">
-                  {overBudget ? "חריגה" : "נשאר"} מתוך{" "}
-                  {money(budgetTotal, currency)}
+                  {overBudget ? "חריגה" : "נשאר"} · התקציב{" "}
+                  {money(budgetTotal ?? 0, currency)} פחות{" "}
+                  {money(equipmentCost, currency)} ציוד
                 </p>
               </div>
             )}

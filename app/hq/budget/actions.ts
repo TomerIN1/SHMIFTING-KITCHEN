@@ -24,6 +24,12 @@ export async function updateBudget(
   await assertAdmin();
 
   const perPerson = Number(formData.get("budgetPerPerson") ?? 0);
+  /* Blank means "no pot given" and falls back to the per-person rate. */
+  const totalRaw = String(formData.get("budgetTotal") ?? "").trim();
+  const budgetTotal = totalRaw === "" ? null : Number(totalRaw);
+  if (budgetTotal !== null && (!Number.isFinite(budgetTotal) || budgetTotal < 0)) {
+    return { error: "תקציב כולל לא תקין" };
+  }
   /* Blank = derive from the roster. */
   const dinersRaw = String(formData.get("expectedDiners") ?? "").trim();
   const diners = dinersRaw === "" ? null : Number(dinersRaw);
@@ -39,6 +45,7 @@ export async function updateBudget(
     .update(settings)
     .set({
       budgetPerPerson: perPerson,
+      budgetTotal,
       expectedDiners: diners === null ? null : Math.round(diners),
       currency: String(formData.get("currency") ?? "₪").slice(0, 3),
       updatedAt: new Date(),

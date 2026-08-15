@@ -10,6 +10,8 @@ import {
 } from "@/lib/domain/shopping";
 import { categoryOrder } from "@/lib/domain/categories";
 import { getMenu } from "./menu";
+import { getEquipmentSummary } from "./equipment";
+import { resolveBudget, standing } from "@/lib/domain/budget";
 import { getSettings, defaultDiners } from "./camp";
 
 /* ============================================================================
@@ -132,7 +134,18 @@ export const getBudget = cache(async () => {
   const diners = await defaultDiners();
   const { rows, summary } = await getShoppingList();
 
-  const totalBudget = camp.budgetPerPerson * diners;
+  /* Food is only half the money. The fridge, the burners and the gas are the
+     other half, and a camp that budgets for food alone meets the fridge on
+     the day it needs one. */
+  const equipment = await getEquipmentSummary();
+
+  const ceiling = resolveBudget({
+    budgetTotal: camp.budgetTotal,
+    budgetPerPerson: camp.budgetPerPerson,
+    diners,
+  });
+
+  const totalBudget = ceiling.total ?? 0;
   const projected = summary.estimatedTotal;
   const spent = rows
     .filter((r) => r.status === "bought")
@@ -146,11 +159,25 @@ export const getBudget = cache(async () => {
     byCategory.set(row.category, entry);
   }
 
+  /* Food plus equipment against the ceiling — the number that matters is the
+     one with both halves in it. */
+  const overall = standing({
+    food: projected,
+    equipment: equipment.projected,
+    ceiling: ceiling.total,
+  });
+
   return {
     currency: camp.currency,
     diners,
-    perPerson: camp.budgetPerPerson,
+    /* The ceiling, and which way it was expressed. Screens need the source so
+       they can say "₪8,000 from finance" rather than inventing a rate. */
+    budgetSource: ceiling.source,
+    perPerson: ceiling.perPerson,
     totalBudget,
+    hasBudget: ceiling.total !== null,
+    equipment,
+    overall,
     projected,
     spent,
     /* Everything still to buy, at estimate. */

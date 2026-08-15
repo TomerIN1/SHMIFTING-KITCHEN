@@ -162,6 +162,14 @@ export const settings = sqliteTable("settings", {
      (Bible §23). Same nullable-override shape as meals.expectedDiners.
      Read it through defaultDiners(), never directly. */
   expectedDiners: integer("expected_diners"),
+  /* Finance hands down a POT — "the kitchen gets ₪8,000" — not a rate per
+     head. When this is set it is the authority and the per-person figure is
+     derived from it, which is the direction the real conversation runs.
+
+     budgetPerPerson stays as the other way in, for a camp that budgets at
+     "₪45 a head" instead. Exactly one of them is in force at a time; see
+     resolveBudget() in lib/domain/budget.ts. */
+  budgetTotal: real("budget_total"),
   budgetPerPerson: real("budget_per_person").notNull().default(0),
   currency: text("currency").notNull().default("₪"),
   /* Shift selection has its own gate — Bible §38. */
@@ -476,6 +484,63 @@ export const shiftAssignments = sqliteTable(
   (t) => [uniqueIndex("shift_assign_unique_idx").on(t.shiftId, t.userId)],
 );
 
+
+/* -------------------------------------------------------------------------
+   KITCHEN EQUIPMENT — Bible §24, §25
+
+   A fridge, four burners, a gas balloon and a decent knife are not shopping
+   list items. They are not consumed, they do not scale with head count, and
+   half of them are rented or borrowed rather than bought — so aggregating
+   them by ingredient the way food is aggregated would be nonsense.
+
+   They are, however, real money against the same pot. A camp that budgets
+   only for food discovers the fridge on the day it needs one.
+
+   Cost is per unit and multiplied by quantity, because "four burners" is one
+   decision and one line, not four.
+   ---------------------------------------------------------------------- */
+
+export const equipment = sqliteTable(
+  "equipment",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    /* Sorted into the same aisles idea as shopping, but its own vocabulary —
+       see EQUIPMENT_CATEGORIES in lib/domain/equipment.ts. */
+    category: text("category").notNull().default("other"),
+    /* How we get it. `have` and `borrow` cost nothing, which is why they are
+       distinct from `buy` rather than a zero price on one. */
+    acquisition: text("acquisition", {
+      enum: ["rent", "buy", "borrow", "have"],
+    })
+      .notNull()
+      .default("rent"),
+    quantity: integer("quantity").notNull().default(1),
+    /* Per unit, for the whole burn — a fridge rented for a week is one cost,
+       not a daily rate, because that is how the quotes arrive. */
+    estimatedCost: real("estimated_cost").notNull().default(0),
+    /* What it actually came to. Null until somebody pays (Bible §23). */
+    actualCost: real("actual_cost"),
+    status: text("status", { enum: ["needed", "sourced", "secured"] })
+      .notNull()
+      .default("needed"),
+    /* Where it is coming from, and how to reach them. The answer to "where do
+       we even rent a fridge" is worth writing down the first time somebody
+       finds out. */
+    supplier: text("supplier"),
+    link: text("link"),
+    notes: text("notes"),
+    /* Who is chasing it. Null means nobody, which is the point of showing it. */
+    ownerId: text("owner_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("equipment_category_idx").on(t.category)],
+);
+
 /* -------------------------------------------------------------------------
    SHOPPING & BUDGET — Bible §24–§29
    ---------------------------------------------------------------------- */
@@ -578,6 +643,10 @@ export const mealsRelations = relations(meals, ({ many, one }) => ({
     fields: [meals.sourceRoundId],
     references: [voteRounds.id],
   }),
+}));
+
+export const equipmentRelations = relations(equipment, ({ one }) => ({
+  owner: one(users, { fields: [equipment.ownerId], references: [users.id] }),
 }));
 
 export const dishesRelations = relations(dishes, ({ one }) => ({

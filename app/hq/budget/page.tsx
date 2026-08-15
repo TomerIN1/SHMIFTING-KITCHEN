@@ -68,12 +68,21 @@ export default async function BudgetPage() {
               ? money(budget.totalBudget, budget.currency)
               : "—"
           }
-          sub={`${money(budget.perPerson, budget.currency)} × ${budget.diners} אנשים`}
+          sub={
+            /* Say where the ceiling came from. A pot from finance and a rate
+               per head are different facts, and "₪8,000 מהכספים" is a
+               sentence somebody can check. */
+            budget.budgetSource === "total"
+              ? `סכום מהכספים · ${money(budget.perPerson ?? 0, budget.currency)} לאדם`
+              : budget.budgetSource === "perPerson"
+                ? `${money(budget.perPerson ?? 0, budget.currency)} × ${budget.diners} אנשים`
+                : "עוד לא הוגדר"
+          }
           accent="cream"
         />
         <Metric
           label="תחזית עלות"
-          value={money(budget.projected, budget.currency)}
+          value={money(budget.overall.projected, budget.currency)}
           sub={
             budget.totalBudget > 0
               ? budget.overBudget
@@ -91,17 +100,30 @@ export default async function BudgetPage() {
           accent="good"
         />
         <Metric
+          label="מזה ציוד"
+          value={money(budget.equipment.projected, budget.currency)}
+          sub={
+            budget.equipment.outstanding > 0
+              ? `${budget.equipment.outstanding} פריטים עוד בלי מקור`
+              : `${budget.equipment.items} פריטים`
+          }
+          tone={budget.equipment.outstanding > 0 ? "attention" : undefined}
+          accent="lavender"
+          href="/hq/equipment"
+        />
+        <Metric
           label="עלות לאדם"
           value={money(budget.projectedPerPerson, budget.currency)}
           sub={
-            budget.perPerson > 0
+            budget.perPerson !== null && budget.perPerson > 0
               ? budget.projectedPerPerson > budget.perPerson
                 ? `מעל היעד של ${money(budget.perPerson, budget.currency)}`
                 : `מתחת ליעד של ${money(budget.perPerson, budget.currency)}`
               : "עוד לא נקבע יעד"
           }
           tone={
-            budget.perPerson > 0 && budget.projectedPerPerson > budget.perPerson
+            budget.perPerson !== null &&
+            budget.projectedPerPerson > budget.perPerson
               ? "attention"
               : undefined
           }
@@ -274,6 +296,7 @@ export default async function BudgetPage() {
       <Panel title="הגדרות תקציב" accent="dust-blue">
         <div className="p-4">
           <BudgetSettings
+            budgetTotal={camp.budgetTotal}
             perPerson={camp.budgetPerPerson}
             diners={diners}
             dinersOverride={camp.expectedDiners}

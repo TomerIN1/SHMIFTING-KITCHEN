@@ -266,7 +266,13 @@ export default async function HqOverview() {
           <Metric
             label="עלות לאדם"
             value={money(budget.projectedPerPerson, budget.currency)}
-            sub={`מתוך ${money(budget.perPerson, budget.currency)} לאדם`}
+            sub={
+              /* No ceiling yet is the honest answer for most of the season —
+                 ₪0 would read as a target of nothing. */
+              budget.perPerson === null
+                ? "עוד לא נקבע תקציב"
+                : `מתוך ${money(budget.perPerson, budget.currency)} לאדם`
+            }
             accent="sun"
             href="/hq/budget"
           />
