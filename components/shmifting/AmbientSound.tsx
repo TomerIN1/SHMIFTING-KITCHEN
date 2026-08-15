@@ -85,6 +85,17 @@ const FADE_OUT_MS = 1100;
 
 const STORAGE_KEY = "shmifting:sound";
 
+/* Where the music had got to, so crossing between the camp and Kitchen HQ
+   picks the track up instead of restarting it. Those are separate layouts, so
+   the player genuinely unmounts on the way through — without this you would
+   hear the same opening bars every time you used the door. sessionStorage,
+   not local: resuming mid-track a day later would be strange. */
+const POSITION_KEY = "shmifting:sound:at";
+
+/* Long enough to cover a navigation, short enough that a tab left open over
+   lunch starts fresh rather than resuming from a track it half-remembers. */
+const RESUME_WINDOW_MS = 90_000;
+
 /* What happens when a member has never said either way. */
 const DEFAULT_ON = true;
 
@@ -157,6 +168,8 @@ export function AmbientSound() {
      to be playing right now. A blocked autoplay makes those two disagree. */
   const wantedRef = useRef(false);
   const disarmRef = useRef<(() => void) | null>(null);
+  /* Seconds to seek to on the next successful play, set when resuming. */
+  const resumeAtRef = useRef<number | null>(null);
 
   const disarmGesture = useCallback(() => {
     disarmRef.current?.();
@@ -195,8 +208,48 @@ export function AmbientSound() {
     /* Only an explicit "off" opts out. Anything unset means never asked. */
     const wants = stored === null ? DEFAULT_ON : stored === "on";
     wantedRef.current = wants;
+
+    /* Pick the track back up where the last page left it. */
+    try {
+      const saved = sessionStorage.getItem(POSITION_KEY);
+      if (saved) {
+        const { i, t, at } = JSON.parse(saved) as {
+          i: number;
+          t: number;
+          at: number;
+        };
+        if (Date.now() - at < RESUME_WINDOW_MS && i >= 0 && i < TRACKS.length) {
+          resumeAtRef.current = t;
+          setIndex(i);
+        }
+      }
+    } catch {
+      /* Unparseable or unavailable — start from the top, no harm done. */
+    }
+
     if (wants) setOn(true);
   }, []);
+
+  /* Remember the position on the way out. Client-side navigation unmounts us
+     without a page unload, so the cleanup is the only hook that fires. */
+  useEffect(() => {
+    const remember = () => {
+      const el = audioRef.current;
+      if (!el || !wantedRef.current) return;
+      try {
+        sessionStorage.setItem(
+          POSITION_KEY,
+          JSON.stringify({ i: index, t: el.currentTime, at: Date.now() }),
+        );
+      } catch {}
+    };
+
+    window.addEventListener("pagehide", remember);
+    return () => {
+      remember();
+      window.removeEventListener("pagehide", remember);
+    };
+  }, [index]);
 
   /* Runs when sound is switched on, and again on every track change: start
      the new track from silence and let the loop lift it. The ramp is armed
@@ -211,6 +264,20 @@ export function AmbientSound() {
     rateRef.current = LEVEL / FADE_IN_MS;
     pauseAtZeroRef.current = false;
     ensureLoop();
+
+    /* Resume mid-track after a navigation. Guarded, because seeking before
+       metadata exists throws and a stale position could sit past the end. */
+    const resumeAt = resumeAtRef.current;
+    resumeAtRef.current = null;
+    if (resumeAt !== null && resumeAt > 0) {
+      const seek = () => {
+        if (Number.isFinite(el.duration) && resumeAt < el.duration - 1) {
+          el.currentTime = resumeAt;
+        }
+      };
+      if (el.readyState >= 1) seek();
+      else el.addEventListener("loadedmetadata", seek, { once: true });
+    }
 
     /* Armed BEFORE the attempt, not after it fails. play() can take a moment
        to reject, and a visitor who clicks into the email field in that window

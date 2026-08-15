@@ -61,11 +61,14 @@ export default async function ShiftsPage() {
             מישהו צריך לבשל את זה.
           </h1>
           <p className="mt-3 max-w-md text-sm leading-relaxed text-cream-2 sm:text-base">
+            {/* An invitation, not a quota. Nobody owes the camp a shift, and a
+                screen that counts what you still "must" do makes the nicest
+                few hours of the week sound like homework. */}
             {locked
               ? "המשמרות סגורות. מה שרשום כאן — זה מה שיהיה."
               : stillNeeded > 0
-                ? `בחרו ${stillNeeded === 1 ? "עוד משמרת אחת" : `עוד ${stillNeeded} משמרות`}. שעתיים במטבח, ואז אתם חופשיים.`
-                : "בחרתם את המשמרות שלכם. תודה — זה באמת מה שמחזיק את המטבח."}
+                ? "מוזמנים להצטרף אלינו למטבח למשמרת. מוזיקה, שוטים, ואווירת מטבח פתוח מובטחת."
+                : "אתם בפנים — תודה. ואם בא לכם עוד ערב במטבח, תמיד יש מקום."}
           </p>
         </div>
       </section>
@@ -78,8 +81,8 @@ export default async function ShiftsPage() {
         <p className="text-sm leading-relaxed text-cream-2">
           <span className="font-medium text-cream">בוקר וצהריים — מטבח פתוח.</span>{" "}
           אין משמרות ואף אחד לא מבשל לכולם. יש קפה, יש מה למרוח, וכל אחד.ת עושה
-          לעצמו.ה משהו מתי שמתחשק. המשמרות כאן הן רק לארוחות הערב — פעם אחת
-          לאורך כל הבורן, וזה מספיק.
+          לעצמו.ה משהו מתי שמתחשק. המשמרות כאן הן רק לארוחות הערב — קחו כמה
+          שבא לכם.
         </p>
       </div>
 
