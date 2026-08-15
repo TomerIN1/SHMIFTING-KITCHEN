@@ -70,6 +70,19 @@ export default async function ShiftsPage() {
         </div>
       </section>
 
+      {/* Why there is nothing to sign up for before the evening. Without this
+          the board reads as half-built — five dinners and no explanation of
+          where breakfast and lunch went. */}
+      <div className="flex items-start gap-3 rounded-[15px_18px_13px_17px] border-2 border-charcoal-5 bg-charcoal-2 px-4 py-3.5">
+        <Glyph name="sun" className="mt-0.5 shrink-0 text-sun" strokeWidth={2} />
+        <p className="text-sm leading-relaxed text-cream-2">
+          <span className="font-medium text-cream">בוקר וצהריים — מטבח פתוח.</span>{" "}
+          אין משמרות ואף אחד לא מבשל לכולם. יש קפה, יש מה למרוח, וכל אחד.ת עושה
+          לעצמו.ה משהו מתי שמתחשק. המשמרות כאן הן רק לארוחות הערב — פעם אחת
+          לאורך כל הבורן, וזה מספיק.
+        </p>
+      </div>
+
       {allShifts.length === 0 ? (
         <EmptyState title="עוד לא נקבעו משמרות">
           מנהל.ת המטבח עוד לא בנה.תה את לוח המשמרות. כשזה יקרה תוכלו לבחור מתי

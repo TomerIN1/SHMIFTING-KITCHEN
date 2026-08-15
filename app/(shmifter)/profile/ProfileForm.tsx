@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Image from "next/image";
 import { saveProfile, type ProfileState } from "./actions";
 import {
@@ -60,6 +60,19 @@ export function ProfileForm({
   isFirstTime: boolean;
 }) {
   const [state, action, pending] = useActionState(saveProfile, EMPTY);
+
+  /* "נשמר. תודה" is a moment, not a status. It used to sit in the save bar
+     for the rest of the visit — and because that bar is sticky, it followed
+     you down the page saying "saved" while you were busy changing things it
+     had not saved yet. It now says its piece and steps back. */
+  const [justSaved, setJustSaved] = useState(false);
+
+  useEffect(() => {
+    if (!state.ok) return;
+    setJustSaved(true);
+    const timer = setTimeout(() => setJustSaved(false), 4000);
+    return () => clearTimeout(timer);
+  }, [state]);
 
   const [name, setName] = useState(initial.name);
   const [pattern, setPattern] = useState(initial.dietaryPattern);
@@ -216,7 +229,7 @@ export function ProfileForm({
           className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
         >
           <p className="text-sm text-ink/70">
-            {state.ok
+            {justSaved
               ? "נשמר. תודה — זה באמת עוזר."
               : isFirstTime
                 ? "אפשר לחזור ולערוך את זה מתי שרוצים."
@@ -234,13 +247,13 @@ export function ProfileForm({
             )}
             <StickerButton
               type="submit"
-              accent={state.ok ? "good" : "sun"}
+              accent={justSaved ? "good" : "sun"}
               size="md"
               tilt
               disabled={pending}
             >
-              {pending ? "שומרים…" : state.ok ? "נשמר" : "לשמור את הפרופיל"}
-              {state.ok && !pending && <Glyph name="check" strokeWidth={3} />}
+              {pending ? "שומרים…" : justSaved ? "נשמר" : "לשמור את הפרופיל"}
+              {justSaved && !pending && <Glyph name="check" strokeWidth={3} />}
             </StickerButton>
           </div>
         </PaperCard>

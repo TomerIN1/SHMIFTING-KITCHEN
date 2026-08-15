@@ -105,7 +105,12 @@ export async function joinCamp(
     .where(eq(settings.id, camp.id));
 
   await createSession({ userId, role });
-  redirect("/profile?welcome=1");
+  /* Home, not straight into the profile form. The Home is the only screen
+     that shows all three things we need from a new member — profile, votes,
+     shifts — as one trail with the next step called out. Dropping somebody
+     into the longest form in the product before they have seen where they
+     are is how the other two get forgotten. */
+  redirect("/?welcome=1");
 }
 
 const signInSchema = z.object({

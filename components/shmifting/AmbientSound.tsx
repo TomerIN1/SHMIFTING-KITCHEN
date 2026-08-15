@@ -212,15 +212,26 @@ export function AmbientSound() {
     pauseAtZeroRef.current = false;
     ensureLoop();
 
-    void el.play().catch(() => {
-      /* Autoplay refused — the browser wants a gesture first, and no amount
-         of code gets around that. Show the button as off, because silence is
-         what is actually happening, and wait for the member's first touch
-         anywhere on the page to start. */
-      setOn(false);
-      if (wantedRef.current) armGesture();
-    });
-  }, [on, index, ensureLoop, armGesture]);
+    /* Armed BEFORE the attempt, not after it fails. play() can take a moment
+       to reject, and a visitor who clicks into the email field in that window
+       would otherwise have their one qualifying gesture land on nothing and
+       sit in silence. */
+    if (wantedRef.current) armGesture();
+
+    void el
+      .play()
+      .then(() => {
+        /* Playing without needing them — nothing left to wait for. */
+        disarmGesture();
+      })
+      .catch(() => {
+        /* Autoplay refused. No amount of code gets around that: browsers
+           require a gesture before a page may make noise. Show the button as
+           off, because silence is what is actually happening, and let the
+           armed listener start us on their first touch. */
+        setOn(false);
+      });
+  }, [on, index, ensureLoop, armGesture, disarmGesture]);
 
   useEffect(() => {
     return () => {
