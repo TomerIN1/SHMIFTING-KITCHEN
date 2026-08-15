@@ -86,6 +86,27 @@ empty, and that stops being true the moment real people join.
 
 ---
 
+## 0B. THE PRODUCT IS DEPLOYED — AND NOBODY HAS SIGNED UP YET
+
+**https://shmifting-kitchen.vercel.app** is live on Turso. Full detail in
+`project_summary.md` §8B.
+
+**The single most important thing right now: the `users` table is empty, and
+the first person to sign up becomes the Kitchen Lead.** Whoever registers first
+owns the camp. Tomer must create his account before the invite code goes
+anywhere near a group chat. The invite code is `SHMIFT` and the camp is called
+`SHMIFTING` — both defaults, both changeable in HQ → הגדרות, and the code should
+be changed before sharing.
+
+`expectedDiners` defaults to **46**, which is a schema default and not a real
+head count. It multiplies every recipe quantity, so it wants correcting early.
+
+Local development still works unchanged, but read the warning about
+`guard-remote.ts` in `project_summary.md` §8B before running any `db:` script —
+`.env.local` now points at the live camp database.
+
+---
+
 ## 1. WHERE THIS SESSION STOPPED
 
 The whole product was built end to end from an empty repository, QA'd against a seeded camp, then the demo data was cleared.

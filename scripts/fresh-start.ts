@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { eq, ne } from "drizzle-orm";
+import { assertLocalDatabase } from "./guard-remote";
 import { db } from "../lib/db";
 import * as s from "../lib/db/schema";
 
@@ -44,6 +45,9 @@ const clearAll = argv.includes("--all");
 const dryRun = argv.includes("--dry-run");
 
 async function main() {
+  /* --dry-run only reports, so it is safe anywhere. */
+  if (!dryRun) assertLocalDatabase("clear the camp");
+
   if (!keepEmail) {
     console.error(
       "Which account should survive?\n" +

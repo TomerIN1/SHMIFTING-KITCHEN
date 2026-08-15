@@ -1,7 +1,10 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
+import { assertLocalDatabase } from "./guard-remote";
 import { db } from "../lib/db";
 import * as s from "../lib/db/schema";
+
+assertLocalDatabase("seed a demo camp");
 
 /* ============================================================================
    SEED — a believable Camp Shmifting, mid-planning.

@@ -299,6 +299,46 @@ because two of these need a decision before any code:
 
 ---
 
+## 8B. DEPLOYMENT — IT IS LIVE
+
+**https://shmifting-kitchen.vercel.app** — Vercel project
+`tomers-projects-982b087a/shmifting-kitchen`, deploying from `main` on push.
+
+The generated `*-tomers-projects-*.vercel.app` deployment URLs sit behind Vercel
+Deployment Protection and bounce to a Vercel login. That is not a broken deploy —
+**test the production domain above**, which is public.
+
+**Database: Turso** (`shmifting-tomerin1.aws-us-east-1.turso.io`), free Starter
+plan, AWS `us-east-1` — deliberately the same region as the Vercel functions
+(`iad1` = Northern Virginia). Almost every page runs several queries per
+request, so function↔database latency is what matters; user↔function latency is
+paid once. Ireland looks closer to Israel on a map and would be much worse.
+
+It is **not** a Vercel Marketplace resource. The Marketplace install could not
+get past `integration_terms_acceptance_required` — accepting in the browser
+never registered, and `vercel integration installations` kept reporting none —
+so the database was created directly at turso.tech and its two credentials set
+as project env vars by hand. `vercel integration list` will say "No resources
+found"; that is expected, not a missing piece.
+
+Env vars on the project: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `AUTH_SECRET`,
+`OPENAI_API_KEY`, `FAL_KEY`. Production and Preview are marked **Sensitive**,
+which means nothing can read them back — `vercel env pull` returns the literal
+string `[SENSITIVE]`. Development is not, so pull that scope if you need real
+values. Schema was created with `npx drizzle-kit push` against Turso.
+
+### The one dangerous consequence
+
+`.env.local` now holds the live Turso credentials, so **every local script
+points at the camp's real database** — `npm run db:seed` would have written 24
+fictional people over real allergy data, and `db:fresh` would have deleted rows.
+`scripts/guard-remote.ts` now refuses any destructive script whose
+`TURSO_DATABASE_URL` is not a `file:` URL, unless `--allow-remote` is passed.
+`--dry-run` is exempt because it only reports.
+
+To develop against the local SQLite file again, comment `TURSO_DATABASE_URL` out
+of `.env.local`.
+
 ## 9. RUNNING IT
 
 ```bash
