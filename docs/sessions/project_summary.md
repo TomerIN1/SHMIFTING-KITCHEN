@@ -2,7 +2,7 @@
 
 **Durable state of the project. Read this first, every session (CLAUDE.md §0.1).**
 
-Last updated: 2026-08-15 — end of session 1 (the foundation session).
+Last updated: 2026-08-16 — end of session 2 (deployed, voting live, money modelled).
 
 ---
 
@@ -58,7 +58,9 @@ app/
     page.tsx              Overview — exceptions first, numbers second
     people/ allergies/ votes/ menu/ recipes/ shifts/ shopping/ budget/
     readiness/            includes LOCK THE KITCHEN
+    equipment/            the kit: fridge, gas, knives — money that is not food
     settings/ pack/       pack = the printable Master Pack
+    votes/[id]/[optionId] cost one evening before the camp has chosen it
 
 lib/
   db/schema.ts            ★ the data model, heavily commented
@@ -72,8 +74,12 @@ lib/
     coverage.ts           dietary coverage + allergy conflict detection
     shopping.ts           ingredient aggregation + cost conversion
     readiness.ts          the readiness engine
+    budget.ts             resolveBudget() — total vs per-head, one authority
+    equipment.ts          kit vocabulary: categories, acquisition, status
   data/                   ★ server-only reads, all React-cached
     camp.ts menu.ts votes.ts shifts.ts shopping.ts recipes.ts readiness.ts
+    costing.ts            what an un-won evening would cost (proposals only)
+    equipment.ts          the kit list and its summary
   motion.ts               optional ambient video detection
   utils.ts                cn, Hebrew dates, money, plurals
 
@@ -96,8 +102,13 @@ scripts/
   extract-wordmark.py     cuts the wordmark out of Golden Reference 02
   optimize-assets.mjs     PNG → WebP, 57.8 MB → 5.0 MB
   animate-assets.mjs      FAL → public/motion  (animates artwork only)
+  load-env.ts             ★ import FIRST in any script, before ../lib/db
+  guard-remote.ts         refuses destructive scripts against the live camp
   seed.ts                 a believable, deliberately half-finished camp
   fresh-start.ts          clears the demo camp down to one Kitchen Lead
+  seed-cuisines.ts        the 12 evenings on the vote board
+  seed-ingredients.ts     104 priced ingredients
+  seed-equipment.ts       27 pieces of kit
 ```
 
 ---
@@ -111,7 +122,14 @@ Two rules shape the whole schema:
 1. **Allergies are their own table**, never a profile column (Bible §11). They have their own review lifecycle: `reviewedAt`, `reviewedBy`, `reviewNote`. Editing an allergy **clears its review** — see `app/(shmifter)/profile/actions.ts`.
 2. **Derived numbers are never stored.** The shopping list is aggregated on every read. What *is* stored is only what a human decided, in explicit nullable override columns: `recipeItems.scaledOverride`, `shoppingItems.quantityOverride`, `shoppingItems.actualCost`, `meals.overrideReason`. Null means "trust the calculation".
 
-Tables: `users`, `foodProfiles`, `allergies`, `settings` (single row, id `camp`), `voteRounds`, `voteOptions`, `votes`, `meals`, `dishes`, `recipes`, `ingredients`, `recipeItems`, `shifts`, `shiftAssignments`, `shoppingItems`.
+Tables: `users`, `foodProfiles`, `allergies`, `settings` (single row, id `camp`), `voteRounds`, `voteOptions`, `votes`, `meals`, `dishes`, `recipes`, `ingredients`, `recipeItems`, `shifts`, `shiftAssignments`, `shoppingItems`, `equipment`.
+
+3. **A dish belongs to exactly one parent.** `dishes.mealId` and
+   `dishes.voteOptionId` are both nullable and a CHECK constraint enforces that
+   exactly one is set — on a meal it is being cooked, on a vote option it is a
+   costed proposal. A dish with neither is an orphan nothing will ever cook; a
+   dish with both is counted twice and surfaces as a shopping list quietly
+   ordering double. See §6B.
 
 ### Who is coming — `users.notComingAt`
 
@@ -248,30 +266,96 @@ bug would have been caught: the tagline box was 48 px tall against ink spanning
 
 **Domain intelligence** — dietary coverage, allergy→dish conflict detection, recipe scaling with practical rounding, cross-recipe ingredient aggregation, unit-aware cost conversion, budget projection vs actual, the readiness engine.
 
-Build passes. TypeScript passes. 21 routes.
+**Deployed and in use** — see §8B. Voting is live with a real member. The
+ingredient catalogue (104) and equipment list (27) exist. An evening can be
+costed before it wins, and the budget measures the menu against the pot minus
+the kit.
+
+**Not built:** recipes. Zero exist, and everything downstream of them — the
+shopping list, ingredient volumes, the food half of the budget — is computed
+and will appear the moment they do. This is the bottleneck and it is typing.
+
+Build passes. TypeScript passes.
 
 ---
 
-## 6B. PRODUCT DIRECTION — what the camp wants next
+## 6B. THE MONEY AND THE MENU — how the chain actually runs
 
-Stated by the user at the close of session 1. Recorded here so it survives, and
-because two of these need a decision before any code:
+The core loop, and which half of it is automatic:
 
-1. **Recipes are prepared before voting.** Concepts should carry real recipes so
-   the Lead can see cost, dietary coverage and allergens *before* offering them,
-   and so the winner converts into a meal with quantities already done. Blocked
-   by a schema constraint — `dishes.mealId` is NOT NULL, so no recipe can exist
-   before a meal does. Design sketched in `next_session_plan.md` §2A.
-2. ~~**Ambient music.**~~ **Done in session 2.** The user supplied three tracks
-   from mixkit.co, so the FAL-permission question in §0.3 never had to be
-   answered — nothing was generated. See §5 "Ambient sound".
-3. ~~**Video on the main page.**~~ **Done in session 2.** The Home hero is alive.
-   See §5 "Ambient motion". `hero-locked` and `flame-lit` are still defined but
-   ungenerated.
-4. **A systematic pass over every screen**, continuing the visual QA that found
-   four real defects in session 1.
+```
+people → vote → menu → RECIPES → shopping → budget
+                        ^^^^^^^
+                    the only manual step
+```
 
----
+Everything except recipes is derived. That is why an empty camp shows a
+shopping list and a budget of zero: they are computed correctly from nothing,
+which looks identical to being broken. Say so on any screen that shows a total.
+
+### Voting
+
+One round, `הערבים של שמיפטינג`. Twelve whole evenings with closed menus, six
+flames per member and **`maxPerOption: 1`** — so a vote is the sentence "these
+are my six evenings" and the tally IS the menu, with nothing to interpret.
+
+Two earlier designs were tried and deleted, and the reasoning matters if anyone
+is tempted to reintroduce them. A round *per cuisine* with six mains inside
+assumed the cuisines were already chosen, which left the Lead making the
+interesting decision alone. Voting the cuisine *and* the main meant fourteen
+screens before anybody had said a word about Wednesday.
+
+Members can add their own evening (`voteOptions.suggestedBy`), credited by name,
+with no approval queue — a queue turns a warm act into paperwork, and the Lead
+can already delete anything. The name is the moderation.
+
+`/menu` shows live standings while the round is open: rank, flames, how many
+people, and a cut line after the number of evenings the camp will cook.
+Aggregate only, never who voted for what — `getLiveStandings()` is a separate
+query from `summariseRound()` precisely so the Lead's `nonVoters` chasing list
+cannot leak into a member view by someone forgetting to strip a field.
+
+### Costing an evening before it wins
+
+`dishes.mealId` is nullable and `dishes.voteOptionId` exists. A dish hangs off
+**exactly one** of them, enforced by a CHECK constraint rather than a validator:
+
+- on a **meal** it is being cooked;
+- on a **vote option** it is a costed proposal.
+
+Proposals never reach the shopping list, the budget or the printed pack, because
+all three walk the MENU. `getRecipes()` still walks the menu and must keep doing
+so; only the single-recipe lookup searches wider, so the Lead can open what they
+are costing. Promotion re-parents the dishes onto the new meal and the recipes
+travel with them, because `recipes.dishId` points at the dish.
+
+Costed at the camp head count, since a proposal has no date and that is who
+would eat it.
+
+### The budget
+
+Two ways to express a ceiling, exactly one in force, resolved in
+`lib/domain/budget.ts`:
+
+- **`settings.budgetTotal`** — the pot finance hands down. When set it wins and
+  the per-head figure derives from it. This is how the real conversation goes.
+- **`settings.budgetPerPerson`** — a rate, used when no pot has been given.
+
+Storing both as facts would produce two numbers that disagree the moment
+somebody registers, with no way to know which was meant.
+
+**Equipment is the other half of the money.** `equipment` is its own table, not
+a shopping category: a fridge is rented, does not scale with head count, comes
+back afterwards, and aggregating it by ingredient is nonsense. `acquisition`
+distinguishes rent/buy from borrow/have, and only the first two cost anything —
+"somebody is bringing it" is a commitment that can fall through, "we already own
+it" cannot, and the Lead needs to see the difference in the week before
+departure. Status cycles `needed → sourced → secured` in one click, because what
+changes weekly is confidence, not price.
+
+The vote projection measures the menu against **the pot minus the kit**.
+Comparing a menu against the whole budget quietly promises money already spent
+on a generator.
 
 ## 7. DECISIONS ALREADY MADE (do not re-litigate)
 
@@ -282,6 +366,11 @@ because two of these need a decision before any code:
 - **Unlocking the kitchen requires typing `לפתוח את המטבח`** — deliberate, not casual (Bible §32).
 - **An empty meal reports zero conflicts**, not "everyone is blocked". A meal with no dishes is a different problem, reported by a different check.
 - **Motion is optional.** If `public/motion/*.mp4` is absent, the still poster is the whole experience.
+- **Sound is ON by default** — an explicit product-owner override of Design Book §51's "no aggressive autoplay". §51 was NOT amended, so the code and the book disagree on purpose. Do not reconcile them by changing the code; ask a human.
+- **Voting is one round of whole evenings, not a round per cuisine.** Two more elaborate models were built and deleted; the reasoning is in §6B and is worth reading before reintroducing either.
+- **The vote is the decision, not an input to one.** Six flames, one per evening, so the tally IS the menu. This is why `maxPerOption` exists.
+- **Equipment is not a shopping category.** It is its own table for reasons listed in §6B.
+- **Prices in the seeded catalogues are estimates and are labelled as such.** Re-running a seed never overwrites a price a human corrected; that needs an explicit flag.
 - **Removing a person is two operations, not one.** "Not coming" (`users.notComingAt`) drops them from every calculation but keeps their votes, because Bible §13 makes closed results final and the menu was chosen from those flames. Hard deletion exists separately, gated behind typing the person's exact name.
 
 ---
@@ -292,6 +381,9 @@ because two of these need a decision before any code:
 - **Never drive audio volume from `requestAnimationFrame`.** rAF stops in a hidden tab, and a hidden tab is where background music actually lives — a track that ended in another tab would come back playing at volume 0. `AmbientSound` uses a `setInterval` loop with `dt` clamped to 1 s so a throttled tick still carries a real slice of the fade. Related: a cleanup that calls `cancelAnimationFrame` **must also null the stored handle**, or the "is the loop running?" guard stays true forever and the loop never restarts. React's dev double-mount triggers exactly that, and it cost an hour.
 - **`server-only` breaks standalone `tsx` scripts.** Anything importing `lib/data/*` only runs inside Next. Verify domain logic through the browser, or write a script against `lib/domain/*` (pure) instead.
 - **Ingredient cost is quoted per `ingredients.defaultUnit`.** Aggregation may land on a different unit in the same dimension (500 g rather than 0.5 kg). `convertUnitCost()` restates the price. Skipping it produced a ₪39,894 projection instead of ~₪1,600.
+- **`drizzle-kit push` cannot add a column and its index or constraint in one pass.** It emits the index first and dies on the missing column. This happened twice in session 2; both tables were empty so they were rebuilt by hand with the target shape. **The next schema change will land on tables with real rows** — generate a migration, or `alter table … add column` manually and let push reconcile.
+- **Scripts must `import "./load-env"` before `../lib/db`.** ES imports are hoisted, so calling `dotenv.config()` in the script body runs *after* the database connection has already been opened against the wrong file. It does not throw; it silently talks to the local SQLite file and reports success. Three separate debugging sessions in one day traced back to this.
+- **Emails are stored lowercased** by the join schema. A script matching an email exactly updates zero rows and reports success unless it checks `rowsAffected`.
 - **`.env` is off limits** (CLAUDE.md §0.3). `AUTH_SECRET` was added to `.env.local` instead, which Next also loads and which takes precedence.
 - **Standalone scripts must load `.env.local` too, not just `.env`.** A bare `import "dotenv/config"` reads only `.env`. The working `FAL_KEY` lives in `.env.local`, so the animator spent an hour returning `403 · account locked, exhausted balance` — which reads exactly like a billing problem and is not one. `scripts/animate-assets.mjs` now loads `[.env.local, .env]` in that order, matching Next. Any new script touching secrets should do the same.
 - **`create-next-app` overwrites `CLAUDE.md`** with a pointer to `AGENTS.md`. Ours now starts with `@AGENTS.md` and keeps the constitution below it.
@@ -320,6 +412,12 @@ never registered, and `vercel integration installations` kept reporting none —
 so the database was created directly at turso.tech and its two credentials set
 as project env vars by hand. `vercel integration list` will say "No resources
 found"; that is expected, not a missing piece.
+
+### The camp as it stands
+
+1 member (Tomer, admin) · invite code `SHMIFT2026` · departure 2 Nov 2026 ·
+vote open until 1 Oct with 12 evenings and 6 flames each · 5 dinner shifts,
+25 slots · 104 ingredients · 27 equipment items · **0 recipes** · budget unset.
 
 Env vars on the project: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `AUTH_SECRET`,
 `OPENAI_API_KEY`, `FAL_KEY`. Production and Preview are marked **Sensitive**,
