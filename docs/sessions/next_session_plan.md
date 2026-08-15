@@ -65,6 +65,12 @@ frame, so that one element nudges at the loop point. Invisible at full speed
 behind the countdown card and the gradient. A re-roll with another seed is the
 fix if it ever bothers anyone.
 
+**Sound is now ON by default**, at the product owner's request — an explicit
+override of Design Book §51, which still says "no aggressive autoplay". §51 was
+**not** amended, so the code and the Design Book disagree on purpose. Do not
+reconcile them by changing the code; ask a human. Details in
+`project_summary.md` §5, including the gesture bridge that browsers force on us.
+
 **The `GIFT OR SHMIFT?` tagline was cut wrong and is now re-extracted.** Spotted
 by the user, not by us: its crop box was 48 px tall against ink spanning 59 px,
 so the bottom of every glyph was sheared off. Re-cut at (630, 214, 972, 284)

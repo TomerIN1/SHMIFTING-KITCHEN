@@ -181,12 +181,25 @@ Kitchen HQ is silent on purpose, because the Lead may sit in there for an hour
 (`public/audio/shmift-0{1,2,3}.m4a`, 12.8 MB of source mp3 → 6.0 MB). The
 mp3 originals are committed in `music-clip-shmifting/`.
 
-Design Book §51 is followed literally: silent on a first visit, `preload="none"`
-so an unopted member downloads nothing, one button and no player chrome, and
-nothing in the product gated behind audio. The preference is a localStorage key
-(`shmifting:sound`) — a per-device comfort setting, not camp data. If a stored
-"on" cannot autoplay without a gesture, the component accepts the silence and
-shows the button as off rather than nagging.
+**Sound is ON by default — a deliberate override of Design Book §51's "no
+aggressive autoplay", decided by the product owner in session 2.** It is not an
+oversight and must not be quietly reverted because the Design Book still says
+otherwise; §51 has not been amended, so raise it with a human before changing
+it back. Everything else in §51 is still obeyed literally: one button, no
+player chrome, and nothing in the product gated behind audio.
+
+**Browsers will not allow audible autoplay on a first visit**, whatever the
+default says — so the component tries immediately, and if it is refused it arms
+a one-shot listener for the member's first `pointerdown`/`keydown`/`touchstart`
+anywhere on the page and starts then. That gesture bridge is the only way
+sound can begin on a first visit; there is no code that gets around it.
+
+The preference is a localStorage key (`shmifting:sound`) — a per-device comfort
+setting, not camp data. Three states, and the distinction matters: **unset**
+means never asked, so the default applies; **"on"** and **"off"** are the
+member's own words and are always honoured. Turning it off also disarms the
+pending gesture listener, or their very next click would restart the music they
+just silenced.
 
 **Tracks play one at a time, each to its own natural ending.** No cross-fade and
 no early fade-out: these pieces are written to resolve, and cutting the tail is

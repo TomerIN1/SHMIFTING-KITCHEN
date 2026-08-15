@@ -12,19 +12,24 @@ import { Glyph } from "./Glyph";
 
    Every one of those lines is a constraint this component obeys literally:
 
-   · SILENT ON A FIRST VISIT. Nothing is fetched and nothing plays until a
-     member presses the button. `preload="none"` means an unopted visitor
-     never pays a byte for six megabytes of music.
-   · IT ONLY EVER RESUMES WHAT THE MEMBER CHOSE. The preference lives in
-     localStorage — a per-device comfort setting, not camp data, so it does
-     not belong in the database. On a later visit we try to pick the music
-     back up; if the browser refuses without a fresh gesture we accept the
-     silence and wait to be asked again. We never nag.
+   · ON BY DEFAULT. **This is a deliberate override of §51's "no aggressive
+     autoplay", made by the product owner in session 2, not an oversight.**
+     The camp wanted members to walk into music. Do not quietly revert it to
+     silent-by-default because the Design Book says so — raise it with a human
+     first. Everything else in §51 is still obeyed to the letter.
+   · OFF STAYS OFF, FOREVER. The default only applies when the member has
+     never expressed a preference. Once somebody turns the music off, that is
+     stored and honoured on every later visit, and nothing here will start
+     sound again behind their back. An unset key means "not asked yet";
+     "off" means "asked, and no".
    · NOT A MUSIC PLAYER. One button. No track names, no skip, no scrubber,
      no volume slider. You cannot tell from the interface how many tracks
      exist, which is the point.
    · NOTHING IS EVER GATED BEHIND IT. No task, state or warning is carried by
      sound. Turn it off and the product is unchanged.
+
+   The preference lives in localStorage — a per-device comfort setting, not
+   camp data, so it does not belong in the database.
 
    The tracks come from mixkit.co, which gives music away for free. They are
    committed to the repository, so nothing here depends on a live key or an
@@ -79,6 +84,12 @@ const FADE_IN_MS = 2600;
 const FADE_OUT_MS = 1100;
 
 const STORAGE_KEY = "shmifting:sound";
+
+/* What happens when a member has never said either way. */
+const DEFAULT_ON = true;
+
+/* Any of these counts as the gesture a browser is waiting for. */
+const GESTURES = ["pointerdown", "keydown", "touchstart"] as const;
 
 export function AmbientSound() {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -142,14 +153,49 @@ export function AmbientSound() {
     }, 40);
   }, [stopLoop]);
 
-  /* Restore the member's own choice. Never a default — an unset key stays
-     silent forever. */
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === "on") setOn(true);
-    } catch {
-      /* Private browsing can throw on access. Silence is a fine fallback. */
+  /* Whether this member wants sound at all, as opposed to whether it happens
+     to be playing right now. A blocked autoplay makes those two disagree. */
+  const wantedRef = useRef(false);
+  const disarmRef = useRef<(() => void) | null>(null);
+
+  const disarmGesture = useCallback(() => {
+    disarmRef.current?.();
+    disarmRef.current = null;
+  }, []);
+
+  /* Wait for the member's first interaction anywhere, then start. This is the
+     only way audible playback can begin on a first visit — browsers require a
+     gesture, and treat one click on the page as consent for the whole page.
+     It fires once and then unhooks itself. */
+  const armGesture = useCallback(() => {
+    if (disarmRef.current) return;
+
+    const fire = () => {
+      disarmGesture();
+      if (wantedRef.current) setOn(true);
+    };
+
+    for (const type of GESTURES) {
+      window.addEventListener(type, fire, { once: true, passive: true });
     }
+    disarmRef.current = () => {
+      for (const type of GESTURES) window.removeEventListener(type, fire);
+    };
+  }, [disarmGesture]);
+
+  /* Decide what this visit should do, then try it. */
+  useEffect(() => {
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(STORAGE_KEY);
+    } catch {
+      /* Private browsing can throw on access. Fall through to the default. */
+    }
+
+    /* Only an explicit "off" opts out. Anything unset means never asked. */
+    const wants = stored === null ? DEFAULT_ON : stored === "on";
+    wantedRef.current = wants;
+    if (wants) setOn(true);
   }, []);
 
   /* Runs when sound is switched on, and again on every track change: start
@@ -167,13 +213,21 @@ export function AmbientSound() {
     ensureLoop();
 
     void el.play().catch(() => {
-      /* Autoplay refused: the page was restored without a gesture. Fall back
-         to silence and let the button speak for itself. */
+      /* Autoplay refused — the browser wants a gesture first, and no amount
+         of code gets around that. Show the button as off, because silence is
+         what is actually happening, and wait for the member's first touch
+         anywhere on the page to start. */
       setOn(false);
+      if (wantedRef.current) armGesture();
     });
-  }, [on, index, ensureLoop]);
+  }, [on, index, ensureLoop, armGesture]);
 
-  useEffect(() => stopLoop, [stopLoop]);
+  useEffect(() => {
+    return () => {
+      stopLoop();
+      disarmGesture();
+    };
+  }, [stopLoop, disarmGesture]);
 
   /* The clip reached its own ending. Only now does the next one load. */
   function handleEnded() {
@@ -189,10 +243,16 @@ export function AmbientSound() {
       pauseAtZeroRef.current = true;
       ensureLoop();
       setOn(false);
+      /* Say it and mean it: cancel the pending gesture too, or their very
+         next click would turn the music straight back on. */
+      wantedRef.current = false;
+      disarmGesture();
       try {
         localStorage.setItem(STORAGE_KEY, "off");
       } catch {}
     } else {
+      wantedRef.current = true;
+      disarmGesture();
       setOn(true);
       try {
         localStorage.setItem(STORAGE_KEY, "on");
