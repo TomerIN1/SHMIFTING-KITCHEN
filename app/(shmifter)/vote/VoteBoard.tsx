@@ -107,9 +107,14 @@ export function VoteBoard({
       {/* ---- The flames you are still holding ---------------------------- */}
       <div className="sticky top-[74px] z-30 rounded-[16px_20px_14px_18px] border-[2.5px] border-ink bg-charcoal-2/95 px-4 py-3 shadow-[4px_5px_0_0_var(--color-ink)] backdrop-blur-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          {/* Wraps as a unit. This row used to be a single non-wrapping line,
+              so on a phone the flames slid underneath the text and sat on top
+              of it — five 36px flames plus a sentence does not fit in 390px.
+              The flames now shrink a little and get their own line when they
+              need one. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
             <span
-              className="flex items-center gap-1"
+              className="flex shrink-0 items-center gap-0.5 sm:gap-1"
               role="img"
               aria-label={`נשארו לכם ${left} מתוך ${tokens} להבות`}
             >
@@ -119,7 +124,7 @@ export function VoteBoard({
                   src={i < left ? OBJECT.flameLit : OBJECT.flameUnlit}
                   alt=""
                   className={cn(
-                    "h-9 w-9 object-contain transition-all duration-300 motion-reduce:transition-none",
+                    "h-7 w-7 object-contain transition-all duration-300 motion-reduce:transition-none sm:h-9 sm:w-9",
                     i < left
                       ? "animate-flicker"
                       : "scale-90 opacity-35 grayscale",
@@ -128,7 +133,7 @@ export function VoteBoard({
                 />
               ))}
             </span>
-            <span className="font-display text-base text-cream">
+            <span className="font-display text-[15px] leading-snug text-cream sm:text-base">
               {left > 0
                 ? `נשארו לכם ${left === 1 ? "להבה אחת" : `${left} להבות`}`
                 : "חילקתם את כל האש"}

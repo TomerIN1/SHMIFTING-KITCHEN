@@ -51,11 +51,15 @@ export default async function VotePage() {
             THE GREAT MENU VOTE
           </p>
           <h1 className="shm-poster mx-auto mt-2 max-w-lg text-3xl leading-tight text-cream sm:text-4xl">
-            תנו את האש שלכם לאוכל שאתם רוצים.
+            בחרו את הערבים שלכם.
           </h1>
+          {/* Describes the mechanism that actually ships: one flame per
+              evening, as many flames as the camp has dinners. The old copy
+              still promised you could pile them all onto one dish, which the
+              board now refuses to let you do. */}
           <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-cream-2 sm:text-base">
-            כל אחד מקבל כמה להבות. אפשר לתת את כולן למנה אחת, או לפזר. ככה נדע
-            לא רק מה בחרתם — אלא כמה בא לכם.
+            לכל אחד.ת יש להבה אחת לכל ערב שנבשל. תנו אותן לערבים שאתם הכי
+            רוצים — הערבים שיאספו הכי הרבה אש הם אלה שיהיו.
           </p>
         </div>
       </section>
