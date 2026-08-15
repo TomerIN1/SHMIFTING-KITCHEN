@@ -44,7 +44,7 @@ export default async function ReadinessPage() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-[12.5px] text-cream-dim">מוכנות כוללת</p>
-            <p className="font-display text-5xl leading-none tabular-nums text-cream">
+            <p className="text-5xl font-black leading-none tabular-nums text-cream">
               {readiness.score}
               <span className="text-2xl text-cream-dim">%</span>
             </p>

@@ -400,7 +400,7 @@ function OptionRow({
 
         <div className="flex items-center gap-2">
           <div className="text-end">
-            <p className="font-display text-xl tabular-nums text-sun" dir="ltr">
+            <p className="text-xl font-black tabular-nums text-sun" dir="ltr">
               {option.flames}
             </p>
             <p className="text-[11.5px] text-cream-dim">

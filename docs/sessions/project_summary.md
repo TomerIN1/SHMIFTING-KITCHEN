@@ -122,6 +122,8 @@ Tables: `users`, `foodProfiles`, `allergies`, `settings` (single row, id `camp`)
 - Palette: shmift-pink `#e8788e`, lavender `#a76db4`, sun `#f6a83c`, peach `#f58a46`, terracotta `#e4703f`, dust-blue `#748f9e`, cream `#f4e6c8`.
 - **Reserved state colours** — `alarm`, `attention`, `good`. Nothing decorative may use them (Design Book §9).
 
+**Typography split is functional, not stylistic.** Suez One (`font-display`) carries poster moments only. Operational numerals use Heebo, heavy and tabular — Suez One's zero and its ₪ read as Hebrew letters at a glance, so a budget of `₪0` looked like a word. Design Book §31 already forbids display type for dense operational content; this is that rule with teeth.
+
 Visual grammar, expressed as utilities: `shm-outline` (2.5px ink border), `shm-lift` (hard offset shadow, never a blur), `shm-paper` (cream printed stock), `shm-panel` (charcoal HQ surface), `shm-poster` (display lettering), irregular border-radii everywhere. A riso grain overlay sits on `body::after`.
 
 **Member vs Admin** (Design Book §27/§28) is enforced by which surface you reach for: `PaperCard` + `StickerButton` + tilt for members; `Panel` + `ToolButton` + no tilt for HQ.

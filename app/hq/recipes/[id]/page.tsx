@@ -11,6 +11,7 @@ import { Glyph } from "@/components/shmifting/Glyph";
 import { StatusChip } from "@/components/shmifting/Status";
 import { scaleRecipe } from "@/lib/domain/scaling";
 import { mealTypeLabel } from "@/lib/domain/categories";
+import { allergenLabel } from "@/lib/domain/allergens";
 import { hebrewDay, money } from "@/lib/utils";
 
 /* ============================================================================
@@ -141,7 +142,7 @@ export default async function RecipePage({
                 key={a}
                 className="rounded border border-attention/60 bg-attention/10 px-1.5 py-0.5 text-[12.5px] text-attention"
               >
-                {a}
+                {allergenLabel(a)}
               </span>
             ))}
           </p>

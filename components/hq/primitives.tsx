@@ -35,9 +35,13 @@ export function Metric({
   const body = (
     <>
       <p className="text-[12.5px] font-medium text-cream-dim">{label}</p>
+      {/* Design Book §31: "Do not use expressive display typography for dense
+          operational content." Suez One's zero and its ₪ read as Hebrew
+          letters at a glance — a budget of ₪0 must never look like a word.
+          Operational numbers use the functional face, heavy, tabular. */}
       <p
         className={cn(
-          "mt-1 font-display text-3xl leading-none tabular-nums",
+          "mt-1 text-3xl font-black leading-none tabular-nums",
           tone === "alarm"
             ? "text-alarm"
             : tone === "attention"

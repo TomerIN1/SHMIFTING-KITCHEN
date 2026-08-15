@@ -19,6 +19,11 @@ Every route in Bible §48 and §49 exists and works against real seeded data:
 
 **Nothing is left half-written.** There is no partially-implemented file, no stubbed function, no TODO comment standing in for logic.
 
+A follow-up visual QA pass fixed two things found by looking at rendered screens rather than code:
+
+- the allergen chip on the recipe detail page printed the raw key (`legumes`) instead of the Hebrew label — it was missing `allergenLabel()`
+- operational numerals were set in Suez One, whose zero and ₪ glyph read as Hebrew letters; `₪0` looked like a word. All HQ numerals now use the functional face (see the typography note in `project_summary.md`)
+
 ---
 
 ## 2. THE ONE BLOCKED THING

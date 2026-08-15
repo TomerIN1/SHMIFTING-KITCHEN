@@ -68,13 +68,13 @@ export default async function HqLayout({ children }: LayoutProps<"/hq">) {
             <dl className="hidden items-center gap-4 text-[12.5px] lg:flex">
               <div className="flex items-baseline gap-1.5">
                 <dt className="text-cream-dim">לאבק</dt>
-                <dd className="font-display tabular-nums text-cream" dir="ltr">
+                <dd className="font-bold tabular-nums text-cream" dir="ltr">
                   {days}
                 </dd>
               </div>
               <div className="flex items-baseline gap-1.5">
                 <dt className="text-cream-dim">סועדים</dt>
-                <dd className="font-display tabular-nums text-cream" dir="ltr">
+                <dd className="font-bold tabular-nums text-cream" dir="ltr">
                   {camp.expectedDiners}
                 </dd>
               </div>
@@ -84,7 +84,7 @@ export default async function HqLayout({ children }: LayoutProps<"/hq">) {
               >
                 <dt className="text-cream-dim">מוכנות</dt>
                 <dd
-                  className="font-display tabular-nums text-sun"
+                  className="font-bold tabular-nums text-sun"
                   dir="ltr"
                 >
                   {readiness.score}%

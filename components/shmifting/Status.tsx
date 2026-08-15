@@ -89,7 +89,7 @@ export function Capacity({
   return (
     <span
       className={cn(
-        "inline-flex items-baseline gap-1 font-display tabular-nums",
+        "inline-flex items-baseline gap-1 font-semibold tabular-nums",
         tone === "done" && "text-good",
         tone === "attention" && "text-attention",
         tone === "alarm" && "text-alarm",
