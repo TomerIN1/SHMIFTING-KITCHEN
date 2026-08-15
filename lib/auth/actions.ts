@@ -12,6 +12,11 @@ import { newId } from "@/lib/utils";
 export interface AuthState {
   error?: string;
   field?: "name" | "email" | "password" | "code";
+  /* What they typed, handed back so a rejected form is a correction rather
+     than a retype. Losing four fields because one code was wrong is how a
+     sign-up reads as "nothing happened". The password is deliberately never
+     returned — it would end up in the HTML. */
+  values?: { name?: string; email?: string; code?: string };
 }
 
 const joinSchema = z.object({
@@ -25,6 +30,13 @@ export async function joinCamp(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
+  /* Captured before validation so even a rejected parse comes back filled. */
+  const values = {
+    name: String(formData.get("name") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    code: String(formData.get("code") ?? ""),
+  };
+
   const parsed = joinSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -37,6 +49,7 @@ export async function joinCamp(
     return {
       error: first.message,
       field: first.path[0] as AuthState["field"],
+      values,
     };
   }
 
@@ -44,18 +57,22 @@ export async function joinCamp(
 
   const camp = await db.query.settings.findFirst();
   if (!camp) {
-    return { error: "המטבח עוד לא הוגדר. דברו עם מנהל.ת המטבח." };
+    return { error: "המטבח עוד לא הוגדר. דברו עם מנהל.ת המטבח.", values };
   }
 
   if (code.toUpperCase() !== camp.inviteCode.toUpperCase()) {
-    return { error: "קוד הקמפ לא נכון", field: "code" };
+    return { error: "קוד הקמפ לא נכון", field: "code", values };
   }
 
   const existing = await db.query.users.findFirst({
     where: eq(users.email, email),
   });
   if (existing) {
-    return { error: "המייל הזה כבר רשום. אפשר פשוט להתחבר.", field: "email" };
+    return {
+      error: "המייל הזה כבר רשום. אפשר פשוט להתחבר.",
+      field: "email",
+      values,
+    };
   }
 
   /* The very first person through the door is the Kitchen Lead. Without this
@@ -107,7 +124,11 @@ export async function signIn(
 
   if (!parsed.success) {
     const first = parsed.error.issues[0];
-    return { error: first.message, field: first.path[0] as AuthState["field"] };
+    return {
+      error: first.message,
+      field: first.path[0] as AuthState["field"],
+      values: { email: String(formData.get("email") ?? "") },
+    };
   }
 
   const user = await db.query.users.findFirst({
@@ -120,7 +141,10 @@ export async function signIn(
     user && (await bcrypt.compare(parsed.data.password, user.passwordHash));
 
   if (!ok || !user) {
-    return { error: "מייל או סיסמה לא נכונים" };
+    return {
+      error: "מייל או סיסמה לא נכונים",
+      values: { email: parsed.data.email },
+    };
   }
 
   await createSession({ userId: user.id, role: user.role });

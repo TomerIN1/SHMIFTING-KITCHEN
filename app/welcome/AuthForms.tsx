@@ -98,6 +98,7 @@ function JoinForm({ firstEver }: { firstEver: boolean }) {
         <TextInput
           id="join-name"
           name="name"
+          defaultValue={state.values?.name}
           autoComplete="name"
           required
           placeholder="השם שאנשים בקמפ מכירים"
@@ -108,6 +109,7 @@ function JoinForm({ firstEver }: { firstEver: boolean }) {
         <TextInput
           id="join-email"
           name="email"
+          defaultValue={state.values?.email}
           type="email"
           autoComplete="email"
           required
@@ -143,6 +145,7 @@ function JoinForm({ firstEver }: { firstEver: boolean }) {
         <TextInput
           id="join-code"
           name="code"
+          defaultValue={state.values?.code}
           required
           autoCapitalize="characters"
           dir="ltr"
@@ -175,6 +178,7 @@ function SignInForm() {
         <TextInput
           id="in-email"
           name="email"
+          defaultValue={state.values?.email}
           type="email"
           autoComplete="email"
           required

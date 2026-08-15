@@ -21,11 +21,20 @@ const COOKIE = "shmifting_session";
 const MAX_AGE = 60 * 60 * 24 * 90; // a planning season
 
 function secret(): Uint8Array {
-  const value = process.env.AUTH_SECRET;
+  /* Trimmed, because a hosting dashboard hands an unset variable back as ""
+     rather than undefined. That is how this failed in production: the
+     variable existed, so it looked configured, and every sign-up got as far
+     as writing the account to the database and then died signing the cookie. */
+  const value = process.env.AUTH_SECRET?.trim();
   if (!value) {
-    throw new Error(
-      "AUTH_SECRET is missing. Add it to .env.local — see .env.example.",
-    );
+    /* Name where it is actually missing from. The old message said "add it to
+       .env.local", which is useless advice when you are staring at a 500 from
+       a serverless function that has no such file. */
+    const where = process.env.VERCEL
+      ? `the Vercel project (${process.env.VERCEL_ENV ?? "production"}) — ` +
+        `\`vercel env add AUTH_SECRET\`, then redeploy`
+      : ".env.local — see .env.example";
+    throw new Error(`AUTH_SECRET is missing or empty. Set it in ${where}.`);
   }
   return new TextEncoder().encode(value);
 }
