@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useActionState, useState, useTransition } from "react";
 import {
   createRound,
@@ -251,6 +253,7 @@ export function OptionEditor({
     dietary: string;
     tags: string[];
     mealDate: Date | null;
+    costedDishes: number;
     flames: number;
     share: number;
     voters: number;
@@ -267,6 +270,7 @@ export function OptionEditor({
         <OptionRow
           key={option.id}
           option={option}
+          roundId={roundId}
           editable={editable}
           showPromote={showPromote}
         />
@@ -381,9 +385,11 @@ export function OptionEditor({
 
 function OptionRow({
   option,
+  roundId,
   editable,
   showPromote,
 }: {
+  roundId: string;
   option: {
     id: string;
     title: string;
@@ -393,6 +399,7 @@ function OptionRow({
     dietary: string;
     tags: string[];
     mealDate: Date | null;
+    costedDishes: number;
     flames: number;
     share: number;
     voters: number;
@@ -515,6 +522,18 @@ function OptionRow({
               </ToolButton>
             </form>
           )}
+
+          {/* Cost the evening before the camp decides. Always available, even
+              on a closed round — knowing what the loser would have cost is
+              how you argue for it next year. */}
+          <Link
+            href={`/hq/votes/${roundId}/${option.id}`}
+            title="לתמחר את הערב הזה"
+            className="inline-flex items-center gap-1.5 rounded-[9px_11px_8px_10px] border-2 border-charcoal-5 px-2.5 py-1.5 text-[12.5px] text-cream-2 transition-colors hover:border-sun hover:text-sun"
+          >
+            <Glyph name="coin" strokeWidth={2.2} />
+            {option.costedDishes > 0 ? `${option.costedDishes} מנות` : "לתמחר"}
+          </Link>
 
           {editable && (
             <>

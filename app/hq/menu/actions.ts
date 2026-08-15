@@ -158,19 +158,27 @@ export async function addDish(
   formData: FormData,
 ): Promise<MenuState> {
   await assertAdmin();
-  const mealId = String(formData.get("mealId") ?? "");
   const name = String(formData.get("name") ?? "").trim();
-  if (!mealId) return { error: "ארוחה לא נמצאה" };
+
+  /* A dish belongs to a meal that is being cooked, or to an evening the camp
+     is still voting on — never both, which the database enforces. The form
+     says which by sending one field or the other. */
+  const mealId = String(formData.get("mealId") ?? "") || null;
+  const voteOptionId = String(formData.get("voteOptionId") ?? "") || null;
+
+  if (!mealId && !voteOptionId) return { error: "לא ברור לאיזו ארוחה" };
+  if (mealId && voteOptionId) return { error: "מנה שייכת לארוחה אחת בלבד" };
   if (!name) return { error: "צריך שם למנה" };
 
   const [{ count } = { count: 0 }] = await db
     .select({ count: sql<number>`count(*)` })
     .from(dishes)
-    .where(eq(dishes.mealId, mealId));
+    .where(mealId ? eq(dishes.mealId, mealId) : eq(dishes.voteOptionId, voteOptionId!));
 
   await db.insert(dishes).values({
     id: newId(),
     mealId,
+    voteOptionId,
     name,
     role: String(formData.get("role") ?? "main") as "main",
     dietary: String(formData.get("dietary") ?? "omnivore") as "omnivore",
@@ -178,6 +186,7 @@ export async function addDish(
   });
 
   touch();
+  if (voteOptionId) revalidatePath("/hq/votes", "layout");
   return { ok: true };
 }
 
@@ -200,6 +209,7 @@ export async function updateDish(formData: FormData): Promise<void> {
     .where(eq(dishes.id, id));
 
   touch();
+  revalidatePath("/hq/votes", "layout");
 }
 
 export async function deleteDish(formData: FormData): Promise<void> {
@@ -208,4 +218,5 @@ export async function deleteDish(formData: FormData): Promise<void> {
   if (!id) return;
   await db.delete(dishes).where(eq(dishes.id, id));
   touch();
+  revalidatePath("/hq/votes", "layout");
 }

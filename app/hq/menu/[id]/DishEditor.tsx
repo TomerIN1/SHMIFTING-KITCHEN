@@ -33,18 +33,25 @@ export interface DishView {
 
 export function DishList({
   mealId,
+  voteOptionId,
   dishes,
   locked,
+  emptyNote,
 }: {
-  mealId: string;
+  /* Exactly one of these. A meal is being cooked; a vote option is an
+     evening the camp has not chosen yet but the Lead wants costed. */
+  mealId?: string;
+  voteOptionId?: string;
   dishes: DishView[];
   locked: boolean;
+  emptyNote?: string;
 }) {
   return (
     <div className="space-y-2.5">
       {dishes.length === 0 && (
         <p className="rounded border-2 border-dashed border-charcoal-5 p-4 text-center text-sm text-cream-dim">
-          אין עדיין מנות בארוחה הזו. בלי מנות אין מה לאכול, ואי אפשר לחשב כלום.
+          {emptyNote ??
+            "אין עדיין מנות בארוחה הזו. בלי מנות אין מה לאכול, ואי אפשר לחשב כלום."}
         </p>
       )}
 
@@ -52,7 +59,7 @@ export function DishList({
         <DishRow key={dish.id} dish={dish} locked={locked} />
       ))}
 
-      {!locked && <AddDish mealId={mealId} />}
+      {!locked && <AddDish mealId={mealId} voteOptionId={voteOptionId} />}
     </div>
   );
 }
@@ -237,7 +244,13 @@ function DishRow({ dish, locked }: { dish: DishView; locked: boolean }) {
   );
 }
 
-function AddDish({ mealId }: { mealId: string }) {
+function AddDish({
+  mealId,
+  voteOptionId,
+}: {
+  mealId?: string;
+  voteOptionId?: string;
+}) {
   const [state, action, pending] = useActionState(addDish, EMPTY);
   const [open, setOpen] = useState(false);
 
@@ -257,7 +270,10 @@ function AddDish({ mealId }: { mealId: string }) {
       }}
       className="rounded-[13px_16px_12px_15px] border-2 border-charcoal-4 bg-charcoal-2 p-3"
     >
-      <input type="hidden" name="mealId" value={mealId} />
+      {mealId && <input type="hidden" name="mealId" value={mealId} />}
+      {voteOptionId && (
+        <input type="hidden" name="voteOptionId" value={voteOptionId} />
+      )}
       <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
         <label className="block">
           <span className="mb-1 block text-[12px] text-cream-dim">שם המנה</span>

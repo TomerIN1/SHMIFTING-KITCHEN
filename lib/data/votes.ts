@@ -20,7 +20,12 @@ export const getRounds = cache(async () => {
     with: {
       options: {
         orderBy: (o, { asc: a }) => [a(o.sortOrder)],
-        with: { suggester: { columns: { name: true } } },
+        with: {
+          suggester: { columns: { name: true } },
+          /* Only the count is surfaced — enough for HQ to show which evenings
+             have been costed, without dragging every recipe into every list. */
+          costedDishes: { columns: { id: true } },
+        },
       },
       votes: true,
     },
@@ -44,6 +49,7 @@ export interface RoundResult {
     dietary: string;
     tags: string[];
     mealDate: Date | null;
+    costedDishes: number;
     imageUrl: string | null;
     accent: string;
     flames: number;
@@ -72,6 +78,7 @@ export async function summariseRound(round: RoundRow): Promise<RoundResult> {
       dietary: option.dietary,
       tags: option.tags,
       mealDate: option.mealDate,
+      costedDishes: option.costedDishes.length,
       dietaryNote: option.dietaryNote,
       imageUrl: option.imageUrl,
       accent: option.accent,
@@ -116,7 +123,12 @@ export const getRoundsForMember = cache(async (userId: string) => {
     with: {
       options: {
         orderBy: (o, { asc: a }) => [a(o.sortOrder)],
-        with: { suggester: { columns: { name: true } } },
+        with: {
+          suggester: { columns: { name: true } },
+          /* Only the count is surfaced — enough for HQ to show which evenings
+             have been costed, without dragging every recipe into every list. */
+          costedDishes: { columns: { id: true } },
+        },
       },
       votes: true,
     },
