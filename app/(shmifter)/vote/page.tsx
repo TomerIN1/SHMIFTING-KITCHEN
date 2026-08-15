@@ -130,7 +130,9 @@ function OpenRound({ round }: { round: MemberRound }) {
 
         <div className="flex items-center gap-2">
           {round.hasVoted && (
-            <StatusChip tone="done">הצבעתם</StatusChip>
+            /* "הצבעתם" alone reads as finished. It is not — the round is open
+               and they can still change their mind. */
+            <StatusChip tone="done">הצבעתם · אפשר לשנות</StatusChip>
           )}
           <StatusChip tone="live">
             {closesIn === null

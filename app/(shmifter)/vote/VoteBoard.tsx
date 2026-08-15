@@ -60,6 +60,13 @@ export function VoteBoard({
     Object.fromEntries(options.map((o) => [o.id, initial[o.id] ?? 0])),
   );
   const [dirty, setDirty] = useState(false);
+  /* Whether they walked in with a vote already cast. Captured once on mount:
+     after a save the server sends the new allocation down, and re-deriving
+     this would flip the wording from "you already voted" to something else
+     mid-sentence. */
+  const [arrivedWithVote] = useState(() =>
+    Object.values(initial).some((flames) => flames > 0),
+  );
 
   const spent = Object.values(allocation).reduce((a, b) => a + b, 0);
   const left = tokens - spent;
@@ -162,6 +169,21 @@ export function VoteBoard({
           >
             <Glyph name="alert" strokeWidth={2.4} />
             {state.error}
+          </p>
+        )}
+
+        {/* Nothing anywhere used to say a vote could be changed, so somebody
+            who reconsidered had no way of knowing whether to try — and the
+            worst guess is "I already voted, I must not touch it". Saving
+            replaces the whole allocation, so the rule is simply: the last
+            save is the one that counts. Say it before they need it. */}
+        {!disabled && (
+          <p className="mt-2 text-[12.5px] leading-relaxed text-cream-dim">
+            {state.ok && !dirty
+              ? "נשמר. אפשר לחזור ולשנות מתי שרוצים — האש שתשלחו אחרונה היא זו שנספרת."
+              : arrivedWithVote
+                ? "כבר הצבעתם. אפשר לשנות עכשיו — מה שתשלחו יחליף את ההצבעה הקודמת."
+                : "לא נעול. אפשר לשנות את ההצבעה עד שהיא נסגרת."}
           </p>
         )}
       </div>
