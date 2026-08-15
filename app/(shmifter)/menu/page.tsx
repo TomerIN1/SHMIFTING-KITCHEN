@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { requireUser } from "@/lib/auth/guard";
 import { getMenu, groupByDay, type MenuMeal } from "@/lib/data/menu";
+import { getLiveStandings } from "@/lib/data/votes";
+import { LiveStandings } from "./LiveStandings";
 import { getSettings, getUserWithProfile } from "@/lib/data/camp";
 import { EmptyState } from "@/components/shmifting/EmptyState";
 import { Glyph } from "@/components/shmifting/Glyph";
@@ -30,10 +32,11 @@ export const metadata = { title: "התפריט — SHMIFTING KITCHEN" };
 
 export default async function MenuPage() {
   const user = await requireUser();
-  const [camp, menu, me] = await Promise.all([
+  const [camp, menu, me, standings] = await Promise.all([
     getSettings(),
     getMenu(),
     getUserWithProfile(user.id),
+    getLiveStandings(),
   ]);
 
   const revealed = Boolean(camp.menuRevealedAt);
@@ -42,16 +45,25 @@ export default async function MenuPage() {
   if (!revealed || meals.length === 0) {
     return (
       <div className="space-y-8">
-        <MenuHero locked />
-        <EmptyState title="התפריט עוד לא נחשף">
-          מנהל.ת המטבח עדיין סוגר.ת פינות. כשהתפריט יהיה מוכן — נחשוף אותו כאן
-          במלואו, יום אחרי יום.
-          {meals.length > 0 && (
-            <span className="mt-2 block text-cream-dim">
-              ({meals.length} ארוחות כבר סגורות מאחורי הקלעים.)
-            </span>
-          )}
-        </EmptyState>
+        <MenuHero locked voting={Boolean(standings)} />
+
+        {/* Before the reveal this page was a closed door with a note on it.
+            While the camp is voting there is something real to show: its own
+            choices, live. The reveal itself is untouched — this is the vote,
+            not a preview of the Lead's work (Bible §16). */}
+        {standings && standings.standings.length > 0 ? (
+          <LiveStandings data={standings} />
+        ) : (
+          <EmptyState title="התפריט עוד לא נחשף">
+            מנהל.ת המטבח עדיין סוגר.ת פינות. כשהתפריט יהיה מוכן — נחשוף אותו כאן
+            במלואו, יום אחרי יום.
+            {meals.length > 0 && (
+              <span className="mt-2 block text-cream-dim">
+                ({meals.length} ארוחות כבר סגורות מאחורי הקלעים.)
+              </span>
+            )}
+          </EmptyState>
+        )}
       </div>
     );
   }
@@ -108,7 +120,16 @@ export default async function MenuPage() {
   );
 }
 
-function MenuHero({ locked = false }: { locked?: boolean }) {
+function MenuHero({
+  locked = false,
+  voting = false,
+}: {
+  locked?: boolean;
+  /* The camp is still choosing. The hero must not announce a decision that
+     has not happened — "THE MENU HAS SPOKEN" over a live vote is the product
+     contradicting itself one scroll apart. */
+  voting?: boolean;
+}) {
   return (
     <section className="relative overflow-hidden rounded-[24px_30px_22px_28px] border-[3px] border-ink shadow-[5px_6px_0_0_var(--color-ink)]">
       <Image
@@ -125,10 +146,10 @@ function MenuHero({ locked = false }: { locked?: boolean }) {
       />
       <div className="relative px-5 py-11 text-center sm:px-9 sm:py-16">
         <p className="font-display text-xs tracking-[0.3em] text-sun">
-          THE MENU HAS SPOKEN
+          {voting ? "THE MENU IS BEING WRITTEN" : "THE MENU HAS SPOKEN"}
         </p>
         <h1 className="shm-poster mx-auto mt-2 max-w-lg text-3xl leading-tight text-cream sm:text-5xl">
-          זה מה שנאכל ביחד.
+          {voting ? "אתם כותבים את זה עכשיו." : "זה מה שנאכל ביחד."}
         </h1>
       </div>
     </section>
