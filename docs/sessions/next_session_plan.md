@@ -2,119 +2,201 @@
 
 **Immediate handover. Read this second, after `project_summary.md` (CLAUDE.md §0.1).**
 
-Written: 2026-08-15, end of the foundation session.
+Written: 2026-08-15, end of session 1 (the foundation session).
 
 ---
 
 ## 1. WHERE THIS SESSION STOPPED
 
-The whole product was built end to end in one session, from an empty repository.
+The whole product was built end to end from an empty repository, QA'd against a seeded camp, then the demo data was cleared.
 
-Every route in Bible §48 and §49 exists and works against real seeded data:
+`npm run build` passes. `npm run typecheck` passes. 21 routes, no console errors on any page visited.
 
-- Shmifter: Home, profile, voting, shifts, menu reveal.
-- Kitchen HQ: overview, people, allergies, votes, menu, recipes, shifts, shopping, budget, readiness, LOCK THE KITCHEN, settings, Master Print Pack.
+**Nothing is half-written.** No stubbed function, no TODO standing in for logic.
 
-`npm run build` passes. `npm run typecheck` passes. 21 routes. No console errors on any page visited.
+### The database right now
 
-**Nothing is left half-written.** There is no partially-implemented file, no stubbed function, no TODO comment standing in for logic.
+The demo camp has been deleted. What is left:
 
-A follow-up visual QA pass fixed two things found by looking at rendered screens rather than code:
+| | |
+|---|---|
+| people | **1** — תומר נבו `<tomer@shmifting.camp>`, Kitchen Lead |
+| expectedDiners | **1** (reset deliberately — it multiplies every recipe) |
+| menu revealed | no |
+| kitchen content | **still seeded fiction**: 7 meals, 11 recipes, 41 ingredients, 10 shifts, 8 supply items, 2 vote rounds |
+| invite code | `SHMIFT` (unchanged — change before sharing) |
 
-- the allergen chip on the recipe detail page printed the raw key (`legumes`) instead of the Hebrew label — it was missing `allergenLabel()`
-- operational numerals were set in Suez One, whose zero and ₪ glyph read as Hebrew letters; `₪0` looked like a word. All HQ numerals now use the functional face (see the typography note in `project_summary.md`)
-- **Kitchen HQ had no way out.** The header reused the member `UserBadge`, which renders a "מטבח HQ" link — inside HQ that pointed at the page you were already on, so the only route back to the camp side was editing the URL. `UserBadge` is now context-aware. Sign-out also picked up its own `exit` glyph, because it had been sharing the `arrow` shape with the new back link.
+Clearing the rest is one command: `npm run db:fresh -- --keep=tomer@shmifting.camp --all`
+
+### Fixed late in the session, by looking at screens rather than reading code
+
+- recipe detail printed raw allergen keys (`legumes`, not `קטניות`)
+- operational numerals were set in Suez One, whose zero and ₪ read as Hebrew letters — `₪0` looked like a word
+- **Kitchen HQ had no way back to the camp side** — the header reused the member badge, which pointed at the page you were already on
+- the Allergy Center listed people who had dropped out — the worst possible place to leak, since it is a safety sheet
 
 ---
 
-## 2. THE ONE BLOCKED THING
+## 2. WHAT THE USER ASKED FOR NEXT
 
-### FAL animation — account has no balance
+Four things, in their words: *"continue checking each part of the app. adding music as well. prepering the recipies before voting. add video clips in the main page."*
 
-`npm run assets:animate` fails with:
+Analysed below, hardest-decision-first rather than in the order asked.
+
+---
+
+### 2A. RECIPES BEFORE VOTING — needs a schema change
+
+**What it means.** Today a vote option carries a free-text `dishes` column ("קארי עדשים ובטטה\nאורז בסמטי"). When a round closes, `promoteToMeal` in `app/hq/votes/actions.ts` splits those lines into bare dish rows with no recipes, and the Kitchen Lead writes every recipe from scratch afterwards.
+
+The user wants the recipe to exist **before** the camp votes. That is a real improvement, not just reordering:
+
+- the Lead sees each concept's **cost** before offering it
+- the Lead sees each concept's **dietary coverage** — can the vegans eat Indian night?
+- the Lead sees each concept's **allergens**, derived from real ingredients
+- the winning concept converts into a meal with quantities already done
+
+This is Bible §22 and §42 ("do the boring calculation so the humans can make the meaningful decision") applied one stage earlier.
+
+**The blocker is structural.** A recipe cannot currently exist without a meal:
 
 ```
-403 {"detail":"User is locked. Reason: Exhausted balance.
-Top up your balance at fal.ai/dashboard/billing."}
+recipes.dishId  → NOT NULL, unique, references dishes
+dishes.mealId   → NOT NULL, references meals
 ```
 
-This is an account state, not a bug. Everything around it is finished and waiting:
+There is nowhere to hang a recipe that has not been scheduled yet.
 
-- `scripts/animate-assets.mjs` is written, documented, and defines three clips: `hero-home`, `hero-locked`, `flame-lit`. Prompts are constrained to ambient motion only — no camera moves, no new objects (Design Book §48).
+**Recommended shape** (smallest change that reuses everything):
+
+1. Make `dishes.mealId` **nullable**, and add a nullable `dishes.voteOptionId` referencing `voteOptions`. A dish then belongs to *either* a meal or a vote option; enforce "exactly one" in the domain layer.
+2. Rewrite `promoteToMeal` to **re-parent** the option's dishes onto the new meal, carrying their recipes intact, instead of creating text stubs from `voteOptions.dishes`.
+3. Give the HQ vote-option editor the dish/recipe UI the meal detail page already has — `app/hq/menu/[id]/DishEditor.tsx` should be extractable more or less as-is.
+4. `analyseMeal()` in `lib/domain/coverage.ts` already takes a plain `DishInput[]`. Feed it a vote option's dishes and the coverage readout works for free — no new domain logic.
+5. Keep `voteOptions.dishes` free text as a fallback for concepts the Lead has not costed yet. Do **not** require a recipe before a vote can be created; that would make voting heavier, and Bible §12 wants it to feel like a camp activity rather than a form.
+
+**Watch out:** everything that counts dishes or recipes now has to say *which*. A library dish attached to a losing concept must never reach the shopping list, the readiness engine, or the Master Pack. `lib/data/recipes.ts` and `lib/data/shopping.ts` both walk the menu so they are naturally safe, but re-read `getMenuStats()` and the readiness checks after the change.
+
+---
+
+### 2B. MUSIC — blocked on a decision only the user can make
+
+Design Book §51 governs this completely, and is unusually prescriptive:
+
+> Sound is atmospheric, not mandatory. No aggressive autoplay. User controls sound. Silence is always valid. Functional tasks must not require sound. **Avoid turning the product into a music player.**
+
+So the shape is settled before any code is written: an opt-in, persistent, clearly-labelled toggle; silent by default on a first visit; nothing in the product ever gated behind audio.
+
+Suggested atmosphere, from §51: desert ambient, subtle downtempo, warm psychedelic soundscape, gentle kitchen sounds.
+
+**The blocker is where the audio comes from.** CLAUDE.md §0.3 says:
+
+> `FAL_KEY` — used **only to bring existing assets to life**… You are not allowed to create new assets with FAL. FAL animates. OpenAI generates.
+
+That rule was written about *artwork*. Music is neither "animating an existing asset" nor something the OpenAI image pipeline can produce. **Ask the user before generating any music with FAL.** The options:
+
+1. They supply a licensed track — cleanest, and a camp probably has a friend who makes music, which is very Shmifting.
+2. They explicitly extend the FAL permission to cover audio, and CLAUDE.md §0.3 is amended to say so.
+3. Ambient sound is layered from short self-hosted samples rather than a composed track.
+
+Do not quietly pick one. Committing generated music under an ambiguous permission is exactly what §0.3 exists to prevent.
+
+**Where it goes once unblocked:** a small persistent control in the member header beside `UserBadge`. Store the preference in `localStorage`, not the database — it is a per-device comfort setting, not camp data. Kitchen HQ should probably stay silent entirely; §28 notes the Lead may work there for an hour.
+
+---
+
+### 2C. VIDEO CLIPS ON THE MAIN PAGE — 90% done, blocked on account balance
+
+Everything is written and waiting:
+
+- `scripts/animate-assets.mjs` defines three clips (`hero-home`, `hero-locked`, `flame-lit`) with prompts constrained to ambient motion only — no camera moves, no new objects (Design Book §48).
 - `lib/motion.ts` detects `public/motion/<name>.mp4` at request time.
-- `components/shmifting/AmbientPoster.tsx` renders the clip over the still poster, muted, looping, and hidden entirely under `prefers-reduced-motion` (Design Book §50).
-- The Shmifter Home already uses `AmbientPoster`.
+- `components/shmifting/AmbientPoster.tsx` plays the clip over the still poster, muted, looping, hidden entirely under `prefers-reduced-motion` (§50).
+- **The Shmifter Home already uses `AmbientPoster`.** It comes alive with no code change.
 
-**To finish it:** top up at fal.ai, then `npm run assets:animate`. The Home comes alive with no code change. If you want more clips, add entries to `CLIPS` in the script and swap the relevant `<Image>` for `<AmbientPoster>` — note `AmbientPoster` is an async Server Component, so it cannot be dropped into a `"use client"` file (the lock screens in `app/hq/readiness/LockKitchen.tsx` are client components and still use plain `<Image>`).
+```
+403 {"detail":"User is locked. Reason: Exhausted balance."}
+```
 
----
+**To finish:** top up at fal.ai/dashboard/billing, then `npm run assets:animate`.
 
-## 3. WHAT TO DO NEXT — PRIORITISED
+To add more clips: append to `CLIPS`, then swap that page's `<Image>` for `<AmbientPoster>`. Note `AmbientPoster` is an **async Server Component** — it cannot be dropped into a `"use client"` file. The lock screens in `app/hq/readiness/LockKitchen.tsx` are client components and still use plain `<Image>`; converting them means lifting the video decision up into the server page.
 
-### P0 — Real camp data
-
-**The demo people have already been cleared.** The local database now holds one
-account — תומר נבו `<tomer@shmifting.camp>`, Kitchen Lead — and `expectedDiners`
-is 1. The seeded *kitchen content* was deliberately kept: 7 meals, 11 recipes,
-41 ingredients, 10 shifts, 8 supply items, 2 vote rounds. All of it is fiction
-and most of it should probably go; `npm run db:fresh -- --keep=… --all` clears
-it in one command.
-
-Still to do before real use:
-1. `/hq/settings` — real departure date, festival window, invite code, shift quota. Everything else keys off these (Bible §38).
-2. `/hq/budget` — real budget per person and real head count. **The head count is what multiplies every recipe**, and it is currently 1.
-3. The surviving account's email is still the seeded `tomer@shmifting.camp`. There is no UI to change your own email; use `npm run db:fresh -- --keep=tomer@shmifting.camp --email=…` or add the capability.
-
-### P1 — Deploy
-Nothing is deployment-specific except the database. Set `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` (or point at any libSQL server) and `AUTH_SECRET`, then deploy. `lib/db/index.ts` needs no change. Vercel is the obvious target given the stack.
-
-Generate a fresh `AUTH_SECRET` for production — do not reuse the development one in `.env.local`.
-
-### P2 — Worth building next, in order of real value
-- **Reminders** (Bible §37). The data to drive them already exists: `getBreakdown().profilesMissing`, `RoundResult.nonVoters`, `getShiftStats().peopleWithoutShift`. Keep it to preparation, never engagement. Email or WhatsApp export of the list would be enough.
-- **Profile photos.** `users.avatarUrl` exists and is unused; the UI falls back to an initial in a circle.
-- **Ingredient catalogue screen.** `updateIngredient` in `app/hq/recipes/actions.ts` is written and has no UI. Right now an ingredient's category, cost and allergens can only be set when it is first created. This is the largest genuine gap.
-- **Dedicated Golden Screens.** Design Book §65 asks that approved Shmifter Home, Menu Voting and Kitchen HQ screenshots be added to `design_book/golden_reference/` as 03/04/05. Screenshots exist in `.playwright-mcp/` from this session but were not promoted — that needs a human's approval, not an agent's.
+Keep it restrained. §48 asks for "life, not distraction", and a video behind every hero would be neither.
 
 ---
 
-## 4. KNOWN RISKS AND OPEN QUESTIONS
+### 2D. CONTINUE CHECKING EACH PART OF THE APP
 
-- **Dates in the seed are relative** (departure = today + 83 days, to match the Bible's own example). Real Midburn dates were never supplied and are the Kitchen Lead's to enter.
-- **No test suite.** `lib/domain/*` is pure and the obvious place to start — `practicalRound`, `scaleRecipe`, `aggregateIngredients`, `analyseMeal`, `computeReadiness` are all deterministic and were the source of the two real bugs found this session.
-- **Concurrency on shift capacity** is checked-then-inserted rather than transactional. For a camp of tens of people this is fine; two people racing for the last slot in the same millisecond could both get in.
-- **No rate limiting on sign-in.** Acceptable for a private camp behind an invite code; not acceptable if this is ever made public.
-- **`drizzle-kit push` needs a TTY** when a column change is ambiguous (it asks rename-vs-drop). It failed on the `arrivesOn` → `notComingAt` change and the dev database had to be reset. On a deployment with real data, generate a migration instead of pushing.
-- **`practicalRound` always rounds up.** Deliberate — running out of onions in the desert is a real failure, one spare onion is not. If the Lead disagrees they override the line, which is exactly the affordance Bible §23 asks for.
+Screens QA'd in the browser this session, against real data:
+
+welcome · home (desktop + mobile) · profile · vote · shifts · menu reveal · HQ overview · people · allergies · recipes list + detail · shopping · budget · readiness/lock · master pack · both headers.
+
+**Not yet examined:**
+
+| | |
+|---|---|
+| `/hq/votes/[id]` | round detail — renders, never inspected |
+| `/hq/menu/[id]` | meal detail — renders, never inspected |
+| `/hq/settings` | renders, never inspected |
+| empty states | **the database is nearly empty right now — this is the ideal moment.** Every screen must explain itself rather than look broken (Bible §39) |
+| mobile | only Home and the HQ header were checked at 390px. Every HQ screen is unverified on a phone |
+| keyboard | tab order, focus rings, the flame board without a mouse, the `Choice` controls |
+| print | the pack was verified structurally (7 page breaks, 27 avoid-break blocks, correct `@media print` rules) but never inspected as actual paginated output |
+| RTL edges | mixed Hebrew/Latin in tables, long names, the `dir="ltr"` numeric spans |
+
+**Start with empty states.** With one person and no votes, the product is in a state no screenshot has ever shown, and this will not be true again once real data arrives.
 
 ---
 
-## 5. ASSETS
+## 3. KNOWN RISKS AND OPEN QUESTIONS
 
-21 exist in `public/assets/` (WebP), listed in `components/shmifting/assets.ts`. Nothing needed is missing.
-
-**If you need a new one:** add it to `ASSETS` in `scripts/generate-assets.mjs`, run `npm run assets:generate && npm run assets:optimize`, then export it from `assets.ts`. The style contract at the top of that script is what keeps new artwork inside the same universe (Design Book §55) — do not write a bare prompt, and do not substitute an emoji or an icon pack (CLAUDE.md §9).
-
-Assets that could improve the product but are not blocking:
-- Per-meal-concept artwork for the menu reveal (Design Book §40: "Each major dinner concept may receive dedicated artwork"). `meals.imageUrl` and `voteOptions.imageUrl` columns already exist and are unused.
-- A "hands making room" illustration for joining a shift (Design Book §49).
+- **The seeded kitchen content is still fiction** (ליל הודו, ערב הגעה, invented shekel prices). Decide whether to keep the ingredient catalogue as a starting library or clear everything with `--all`.
+- **The Kitchen Lead's email is the seeded `tomer@shmifting.camp`.** There is no UI to change your own email. Use `npm run db:fresh -- --keep=… --email=…`, or build it — it is a normal account operation and its absence will be felt.
+- **The invite code is still `SHMIFT`.** Change it in HQ → הגדרות before sharing.
+- **No test suite.** `lib/domain/*` is pure and deterministic and was the source of both real bugs found this session (`convertUnitCost`, the empty-meal guard). That is where tests would pay for themselves first.
+- **`drizzle-kit push` needs a TTY** when a column change is ambiguous. It failed on `arrivesOn` → `notComingAt` and the dev database had to be reset. On a deployment with real data, generate a migration instead. **This will bite again in 2A.**
+- **Shift capacity is checked-then-inserted**, not transactional. Fine for tens of people; two phones racing for the last slot in the same millisecond could both win.
+- **No rate limiting on sign-in.** Acceptable behind an invite code, not if this is ever public.
+- **`practicalRound` always rounds up.** Deliberate — running out of onions in the desert is a real failure, one spare onion is not. The Lead overrides the line if they disagree (Bible §23).
 
 ---
 
-## 6. VERIFYING IT STILL WORKS
+## 4. ASSETS
+
+21 in `public/assets/` (WebP), registered in `components/shmifting/assets.ts`. Nothing currently needed is missing.
+
+**To add one:** append to `ASSETS` in `scripts/generate-assets.mjs`, run `npm run assets:generate && npm run assets:optimize`, export it from `assets.ts`. The style contract at the top of that script is what keeps new artwork inside the same universe (Design Book §55) — never a bare prompt, never an emoji or icon-pack substitute (CLAUDE.md §9).
+
+Worth having, not blocking:
+- per-concept artwork for the menu reveal (§40: "each major dinner concept may receive dedicated artwork"). `meals.imageUrl` and `voteOptions.imageUrl` exist and are unused — **2A makes these more valuable**, since a costed concept deserves a picture.
+- a "hands making room" illustration for joining a shift (§49).
+
+---
+
+## 5. VERIFYING IT STILL WORKS
+
+The database is nearly empty now, so the seeded walkthrough below needs a reset first:
 
 ```bash
-npm run db:reset && npm run dev
+npm run db:reset && npm run dev     # wipes, re-pushes schema, reseeds 24 people
 ```
 
 Then walk this path — it exercises every system:
 
 1. `/welcome` → sign in as `tomer@shmifting.camp` / `shmifting`.
 2. `/hq` → the exception list should show ~7 items. **If it shows 27 "no food" cases, the empty-meal guard in `lib/domain/coverage.ts` has regressed.**
-3. `/hq/allergies` → רועי's dairy allergy must list the two dishes it conflicts with. That is live conflict detection, not stored data.
-4. `/hq/recipes/<any>` → change "כמות סופית לקמפ" on a line; the value turns lavender and is labelled ידני, with the calculated number still shown beside it.
-5. `/hq/shopping` → בצל should aggregate to ~5.75 ק"ג across recipes. **If the projected total reads tens of thousands of shekels, `convertUnitCost` has regressed.**
-6. `/hq/menu` → press THE MENU HAS SPOKEN, then visit `/menu` as a member.
-7. `/hq/pack` → print preview. Charcoal and grain must vanish; ink and structure remain.
+3. `/hq/allergies` → רועי's dairy allergy must list the two dishes it conflicts with. Live detection, not stored data.
+4. `/hq/recipes/<any>` → change "כמות סופית לקמפ" on a line; it turns lavender, is labelled ידני, and the calculated number stays beside it.
+5. `/hq/shopping` → בצל should aggregate to ~5.75 ק"ג. **If the projected total reads tens of thousands of shekels, `convertUnitCost` has regressed.**
+6. `/hq/people` → mark somebody "לא מגיע.ה". Their allergy must vanish from `/hq/allergies`, their shifts must free up, their votes must survive.
+7. `/hq/menu` → press THE MENU HAS SPOKEN, then visit `/menu` as a member.
+8. `/hq/pack` → print preview. Charcoal and grain vanish; ink and structure remain.
 
 Sanity numbers for the seeded camp: 24 people, 4 without a profile, 4 allergies (2 unreviewed), 7 meals (4 final), 40/43 shift positions filled, 35 shopping items, ~₪1,600 projected, readiness 53%.
+
+To return to the cleared state afterwards:
+
+```bash
+npm run db:fresh -- --keep=tomer@shmifting.camp --name="תומר נבו"
+```

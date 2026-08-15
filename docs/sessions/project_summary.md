@@ -2,7 +2,7 @@
 
 **Durable state of the project. Read this first, every session (CLAUDE.md §0.1).**
 
-Last updated: 2026-08-15 — end of the foundation session.
+Last updated: 2026-08-15 — end of session 1 (the foundation session).
 
 ---
 
@@ -164,6 +164,27 @@ Build passes. TypeScript passes. 21 routes.
 
 ---
 
+## 6B. PRODUCT DIRECTION — what the camp wants next
+
+Stated by the user at the close of session 1. Recorded here so it survives, and
+because two of these need a decision before any code:
+
+1. **Recipes are prepared before voting.** Concepts should carry real recipes so
+   the Lead can see cost, dietary coverage and allergens *before* offering them,
+   and so the winner converts into a meal with quantities already done. Blocked
+   by a schema constraint — `dishes.mealId` is NOT NULL, so no recipe can exist
+   before a meal does. Design sketched in `next_session_plan.md` §2A.
+2. **Ambient music**, governed entirely by Design Book §51: opt-in, silent by
+   default, never gating a task, never a music player. Blocked on where the
+   audio comes from — see `next_session_plan.md` §2B, which needs the user's
+   answer before anything is generated.
+3. **Video on the main page.** Already built end to end; waiting only on a FAL
+   account balance.
+4. **A systematic pass over every screen**, continuing the visual QA that found
+   four real defects in session 1.
+
+---
+
 ## 7. DECISIONS ALREADY MADE (do not re-litigate)
 
 - **Only `final` meals reach the shopping list.** Pending meals are reported separately. Buying for an undecided dinner is exactly the error Bible §40 asks us to prevent.
@@ -173,6 +194,7 @@ Build passes. TypeScript passes. 21 routes.
 - **Unlocking the kitchen requires typing `לפתוח את המטבח`** — deliberate, not casual (Bible §32).
 - **An empty meal reports zero conflicts**, not "everyone is blocked". A meal with no dishes is a different problem, reported by a different check.
 - **Motion is optional.** If `public/motion/*.mp4` is absent, the still poster is the whole experience.
+- **Removing a person is two operations, not one.** "Not coming" (`users.notComingAt`) drops them from every calculation but keeps their votes, because Bible §13 makes closed results final and the menu was chosen from those flames. Hard deletion exists separately, gated behind typing the person's exact name.
 
 ---
 
