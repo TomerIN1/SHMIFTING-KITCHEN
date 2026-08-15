@@ -97,6 +97,8 @@ empty, and that stops being true the moment real people join.
 | departure | **2 Nov 2026**, so the countdown is real |
 | festival | **2–7 Nov 2026**, Midburn at Mount Tzin |
 | expectedDiners | **46 — still the schema default, still wrong** |
+| shifts | **5 dinners, 2–6 Nov, 16:30–20:00, 5 cooks each = 25 slots** |
+| self-assignment | **OPEN** (`shiftsOpenAt` is null), quota **1 shift per person** |
 
 **Midburn 2026 is 2–7 November** (city opening 2 Nov, effigy burn 5 Nov, camp
 and art build opens 28 Oct). Confirmed against Midburn's own FAQ. The camp
@@ -106,6 +108,25 @@ date — that is deliberate, not a copy-paste.
 **`expectedDiners` is the one number still wrong.** It multiplies every recipe
 quantity, so the shopping list and the whole budget scale off it. Raise it with
 the Lead before anybody costs a meal.
+
+**Shifts are live and members can take them.** The camp cooks dinner only —
+mornings and middays are people's own — so breakfast and lunch shifts do not
+exist at all rather than existing and sitting permanently empty. The 7th has no
+shift; it is pack-up day.
+
+`shiftsPerPerson` was dropped from 2 to **1** deliberately. Twenty-five slots
+cannot satisfy a quota of two past the twelfth person, and everyone after that
+would carry a shift badge on their Home forever with no shift left to take —
+the meaningless nagging Bible §21 forbids. **If the crew size or the number of
+evenings changes, re-check that `people × quota ≤ total slots` still holds.**
+
+The HQ generator now asks which meals the camp cooks and how many cooks per
+shift, defaulting to dinner only. It still refuses to run when shifts already
+exist, so clear the board first to regenerate.
+
+Verified on production end to end: a member registered, saw all five evenings,
+took one (0/5 → 1/5, "אתם כאן", leave button), and the Home stopped asking. The
+probe account was then deleted — 5 shifts, 0 assignments, one real user.
 
 **Several admins is already supported** and needed no work: HQ → הגדרות lists
 everybody with a toggle between שמיפטר.ית and מנהל.ת מטבח, and
