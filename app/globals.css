@@ -1,0 +1,298 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   SHMIFTING — DESIGN FOUNDATION
+   Calibrated against /design_book/golden_reference/02.png (Shmifting Key Art).
+   Every colour below was sampled from the Golden Reference, not invented.
+   See /design_book/SHMIFTING_DESIGN_BOOK.md §8 Color System.
+   ========================================================================= */
+
+@theme {
+  /* --- The charcoal world -------------------------------------------------
+     GR02's canvas measures rgb(17,19,23). The Design Book asks for something
+     "softer than pure black" — so the deep canvas stays near the reference and
+     surfaces lift toward #303030 for readable panels. */
+  --color-void: #0d0e13;
+  --color-charcoal: #12131a;
+  --color-charcoal-2: #191a22;
+  --color-charcoal-3: #23242e;
+  --color-charcoal-4: #2f303b;
+  --color-charcoal-5: #3d3e4a;
+  --color-ink: #0b0c10; /* outline black — never pure #000 */
+
+  /* --- Dust cream: paper, signs, readable surfaces ---------------------- */
+  --color-cream: #f4e6c8;
+  --color-cream-2: #e8d5b0;
+  --color-cream-3: #d3bb96;
+  --color-cream-dim: #a9967a;
+
+  /* --- Psychedelic palette (sampled from GR02) -------------------------- */
+  --color-shmift-pink: #e8788e; /* the "אנשים" sign */
+  --color-shmift-pink-deep: #c7566f;
+  --color-lavender: #a76db4; /* the giving hands */
+  --color-lavender-deep: #7e4f8c;
+  --color-sun: #f6a83c; /* the sun, the "תקציב" sign */
+  --color-sun-deep: #d4862a;
+  --color-peach: #f58a46; /* the receiving hand, "קניות" */
+  --color-terracotta: #e4703f; /* the "אוכל" sign */
+  --color-dust-blue: #748f9e; /* the cactus */
+  --color-dust-blue-deep: #4f6b7a;
+  --color-coral: #e69388;
+
+  /* --- Functional states -------------------------------------------------
+     Design Book §9 & §46: meaning must survive the decorative palette, and
+     must never depend on red/green alone. These read as Shmifting colours but
+     are reserved: nothing decorative may use them. */
+  --color-alarm: #e5544a; /* allergy / danger — the chili */
+  --color-alarm-deep: #a8342c;
+  --color-attention: #f6a83c; /* needs review */
+  --color-good: #86b083; /* resolved / complete — a desert sage, not SaaS green */
+  --color-good-deep: #5c8459;
+
+  /* --- Type ------------------------------------------------------------- */
+  --font-display: var(--font-suez), "Suez One", Georgia, serif;
+  --font-sans: var(--font-heebo), "Heebo", system-ui, sans-serif;
+
+  --text-mega: clamp(2.75rem, 9vw, 6rem);
+  --text-mega--line-height: 0.92;
+  --text-mega--letter-spacing: -0.02em;
+
+  /* --- Motion (Design Book §48: slow, ambient, organic) ------------------ */
+  --ease-shmift: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-drift: drift 9s ease-in-out infinite;
+  --animate-flicker: flicker 3.2s ease-in-out infinite;
+  --animate-breathe: breathe 7s ease-in-out infinite;
+  --animate-twinkle: twinkle 4.5s ease-in-out infinite;
+  --animate-sway: sway 11s ease-in-out infinite;
+}
+
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  33% { transform: translate3d(6px, -10px, 0) rotate(1.2deg); }
+  66% { transform: translate3d(-5px, -4px, 0) rotate(-0.9deg); }
+}
+@keyframes flicker {
+  0%, 100% { transform: scale(1) rotate(-1deg); opacity: 1; }
+  40% { transform: scale(1.06, 0.96) rotate(1.5deg); opacity: 0.92; }
+  70% { transform: scale(0.97, 1.05) rotate(-0.8deg); opacity: 1; }
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+@keyframes sway {
+  0%, 100% { transform: rotate(-1.6deg); }
+  50% { transform: rotate(1.6deg); }
+}
+
+/* ============================================================================
+   BASE
+   ========================================================================= */
+
+@layer base {
+  html {
+    background: var(--color-charcoal);
+    color: var(--color-cream);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-charcoal);
+    /* The world is never a flat fill — GR02 has depth behind the objects. */
+    background-image:
+      radial-gradient(115% 78% at 50% -8%, rgba(167, 109, 180, 0.16), transparent 62%),
+      radial-gradient(85% 60% at 8% 104%, rgba(232, 120, 142, 0.11), transparent 60%),
+      radial-gradient(75% 55% at 96% 88%, rgba(246, 168, 60, 0.09), transparent 58%);
+    background-attachment: fixed;
+  }
+
+  /* Riso grain. GR02 is a printed poster; without tooth it reads as flat SaaS. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.32;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+
+  /* Hebrew numerals and Latin fragments inside RTL must stay LTR. */
+  [dir="rtl"] .ltr-nums,
+  bdi.num {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  ::selection {
+    background: var(--color-shmift-pink);
+    color: var(--color-ink);
+  }
+
+  /* Design Book §61: focus must always be visible, and must survive
+     the illustrated background. */
+  :focus-visible {
+    outline: 3px solid var(--color-sun);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  input, textarea, select, button { font: inherit; color: inherit; }
+
+  /* Kill the Chrome/Safari autofill wash — it destroys the cream surfaces. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--color-ink);
+    box-shadow: 0 0 0 1000px var(--color-cream) inset;
+  }
+
+  /* Design Book §50 */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ============================================================================
+   SHMIFTING UTILITIES
+   The visual grammar of GR02, expressed as reusable primitives.
+   ========================================================================= */
+
+/* Every illustrated object in GR02 sits inside a confident near-black outline. */
+@utility shm-outline {
+  border: 2.5px solid var(--color-ink);
+}
+@utility shm-outline-thin {
+  border: 2px solid var(--color-ink);
+}
+
+/* Objects are printed, not floated: a hard offset shadow, never a soft blur. */
+@utility shm-lift {
+  box-shadow: 4px 5px 0 0 var(--color-ink);
+}
+@utility shm-lift-sm {
+  box-shadow: 3px 3px 0 0 var(--color-ink);
+}
+@utility shm-lift-lg {
+  box-shadow: 7px 8px 0 0 var(--color-ink);
+}
+
+/* Design Book §13: prefer imperfect geometry. Nothing is a perfect rectangle. */
+@utility shm-blob {
+  border-radius: 46% 54% 51% 49% / 49% 46% 54% 51%;
+}
+@utility shm-card-radius {
+  border-radius: 22px 26px 20px 28px;
+}
+@utility shm-card-radius-sm {
+  border-radius: 13px 16px 11px 15px;
+}
+@utility shm-pill {
+  border-radius: 999px 999px 999px 999px;
+}
+
+/* Paper: the cream surfaces that carry real information (signs, banners,
+   recipe cards, the Master Pack). Printed stock, not a white SaaS card. */
+@utility shm-paper {
+  background-color: var(--color-cream);
+  color: var(--color-ink);
+  background-image:
+    radial-gradient(rgba(11, 12, 16, 0.05) 1px, transparent 1px),
+    radial-gradient(rgba(11, 12, 16, 0.035) 1px, transparent 1px);
+  background-size: 7px 7px, 11px 11px;
+  background-position: 0 0, 3px 4px;
+}
+
+/* Panels inside Kitchen HQ: charcoal, structured, quiet. 25% world / 75% tool. */
+@utility shm-panel {
+  background-color: var(--color-charcoal-2);
+  border: 2px solid var(--color-charcoal-4);
+  border-radius: 14px 16px 13px 17px;
+}
+
+@utility shm-ink-shadow-text {
+  text-shadow: 2px 3px 0 var(--color-ink);
+}
+
+/* Poster lettering. GR02's display type is inked, textured and slightly
+   irregular — never a clean webfont sitting on a dark background. */
+@utility shm-poster {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+  text-shadow:
+    2px 2px 0 var(--color-ink),
+    -1px 1px 0 var(--color-ink),
+    3px 4px 0 rgba(11, 12, 16, 0.4);
+}
+
+/* Hand-drawn edge wobble for purely decorative strokes.
+   Never applied to text — it would smear the Hebrew. */
+@utility shm-wobble {
+  filter: url(#shm-wobble);
+}
+
+@utility shm-scrim {
+  background: linear-gradient(
+    to bottom,
+    rgba(18, 19, 26, 0) 0%,
+    rgba(18, 19, 26, 0.55) 45%,
+    rgba(18, 19, 26, 0.94) 100%
+  );
+}
+
+/* Tables in Kitchen HQ (Design Book §42: a good table is sometimes correct). */
+@utility shm-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================================
+   PRINT — the Kitchen Master Pack (Product Bible §33)
+   The product's final output is paper. This is a first-class surface, not an
+   afterthought: charcoal and grain are stripped, ink and structure remain.
+   ========================================================================= */
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  html, body {
+    background: #fff !important;
+    background-image: none !important;
+    color: #000 !important;
+  }
+
+  body::after { display: none !important; }
+
+  .no-print, nav.no-print, header.no-print, footer.no-print { display: none !important; }
+
+  .print-page { break-after: page; }
+  .print-avoid-break { break-inside: avoid; }
+
+  .shm-paper, .shm-panel {
+    background: #fff !important;
+    background-image: none !important;
+    color: #000 !important;
+    border: 1.5px solid #000 !important;
+    box-shadow: none !important;
+  }
+
+  * { box-shadow: none !important; text-shadow: none !important; }
+
+  a[href]::after { content: ""; }
+}
