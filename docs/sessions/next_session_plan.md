@@ -52,10 +52,18 @@ This is an account state, not a bug. Everything around it is finished and waitin
 ## 3. WHAT TO DO NEXT — PRIORITISED
 
 ### P0 — Real camp data
-The seed is fiction. Before anyone uses this:
-1. `/hq/settings` — set the real departure date, festival window, invite code, shift quota. Everything else keys off these (Bible §38).
-2. `/hq/budget` — set the real budget per person and the real head count. **The head count is what multiplies every recipe.**
-3. Delete the seeded people, or run against a fresh database (`npm run db:reset` then remove the seed users).
+
+**The demo people have already been cleared.** The local database now holds one
+account — תומר נבו `<tomer@shmifting.camp>`, Kitchen Lead — and `expectedDiners`
+is 1. The seeded *kitchen content* was deliberately kept: 7 meals, 11 recipes,
+41 ingredients, 10 shifts, 8 supply items, 2 vote rounds. All of it is fiction
+and most of it should probably go; `npm run db:fresh -- --keep=… --all` clears
+it in one command.
+
+Still to do before real use:
+1. `/hq/settings` — real departure date, festival window, invite code, shift quota. Everything else keys off these (Bible §38).
+2. `/hq/budget` — real budget per person and real head count. **The head count is what multiplies every recipe**, and it is currently 1.
+3. The surviving account's email is still the seeded `tomer@shmifting.camp`. There is no UI to change your own email; use `npm run db:fresh -- --keep=tomer@shmifting.camp --email=…` or add the capability.
 
 ### P1 — Deploy
 Nothing is deployment-specific except the database. Set `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` (or point at any libSQL server) and `AUTH_SECRET`, then deploy. `lib/db/index.ts` needs no change. Vercel is the obvious target given the stack.

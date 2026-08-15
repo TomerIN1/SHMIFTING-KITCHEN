@@ -16,7 +16,8 @@
     "assets:generate": "node scripts/generate-assets.mjs",
     "assets:wordmark": "python3 scripts/extract-wordmark.py",
     "assets:optimize": "node scripts/optimize-assets.mjs",
-    "assets:animate": "node scripts/animate-assets.mjs"
+    "assets:animate": "node scripts/animate-assets.mjs",
+    "db:fresh": "tsx scripts/fresh-start.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

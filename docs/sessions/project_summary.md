@@ -97,6 +97,7 @@ scripts/
   optimize-assets.mjs     PNG → WebP, 57.8 MB → 5.0 MB
   animate-assets.mjs      FAL → public/motion  (animates artwork only)
   seed.ts                 a believable, deliberately half-finished camp
+  fresh-start.ts          clears the demo camp down to one Kitchen Lead
 ```
 
 ---
@@ -205,4 +206,15 @@ npm run build
 npm run assets:generate   # OpenAI — only regenerates what is missing
 npm run assets:optimize   # PNG → WebP
 npm run assets:animate    # FAL — needs account balance
+
+# going from demo data to a real camp
+npm run db:fresh -- --keep=you@example.com --dry-run
+npm run db:fresh -- --keep=you@example.com --name="Your Name" --email=real@you.com
+npm run db:fresh -- --keep=you@example.com --all      # also wipe menu/recipes/shifts
 ```
+
+`db:fresh` deletes every person except the one you keep, promotes them to
+Kitchen Lead, and resets `expectedDiners` to 1 so no future recipe is silently
+multiplied by a head count nobody chose. It also carries `--email`, because the
+seed ships fake `@shmifting.camp` addresses and the product has no self-service
+way to change your own email.
