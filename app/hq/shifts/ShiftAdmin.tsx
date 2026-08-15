@@ -304,9 +304,39 @@ export function GenerateShiftsForm({ defaultDate }: { defaultDate: string }) {
         לבנות לוח משמרות בסיסי
       </p>
       <p className="mb-3 max-w-xl text-[13px] leading-snug text-cream-2/75">
-        בוקר, צהריים וערב לכל יום. אפשר לשנות שעות, כמויות ולמחוק אחר כך — זו
-        רק נקודת התחלה כדי לא להקליד את אותו הדבר עשר פעמים.
+        בוחרים אילו ארוחות הקמפ מבשל, וכמה ימים. אפשר לשנות שעות, כמויות ולמחוק
+        אחר כך — זו רק נקודת התחלה כדי לא להקליד את אותו הדבר עשר פעמים.
       </p>
+
+      {/* Which meals. A camp that only cooks dinner should not be handed a
+          board two thirds full of shifts nobody will ever take. */}
+      <fieldset className="mb-3">
+        <legend className="mb-1.5 text-[11.5px] text-cream-dim">
+          אילו ארוחות
+        </legend>
+        <div className="flex flex-wrap gap-3">
+          {[
+            { value: "breakfast", label: "בוקר", on: false },
+            { value: "lunch", label: "צהריים", on: false },
+            { value: "dinner", label: "ערב", on: true },
+          ].map((meal) => (
+            <label
+              key={meal.value}
+              className="flex items-center gap-2 text-[13px] text-cream-2"
+            >
+              <input
+                type="checkbox"
+                name="meals"
+                value={meal.value}
+                defaultChecked={meal.on}
+                className="h-4 w-4 accent-sun"
+              />
+              {meal.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <div className="flex flex-wrap items-end gap-2">
         <label className="block">
           <span className="mb-1 block text-[11.5px] text-cream-dim">
@@ -323,6 +353,19 @@ export function GenerateShiftsForm({ defaultDate }: { defaultDate: string }) {
             name="days"
             min={1}
             max={14}
+            defaultValue={5}
+            className="w-20"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[11.5px] text-cream-dim">
+            כמה מבשלים
+          </span>
+          <ToolInput
+            type="number"
+            name="people"
+            min={1}
+            max={20}
             defaultValue={5}
             className="w-20"
           />

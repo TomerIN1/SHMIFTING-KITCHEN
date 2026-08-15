@@ -137,16 +137,29 @@ export async function generateShifts(
     return { error: "בין יום אחד ל-14" };
   }
 
-  const template: {
-    key: "breakfast" | "lunch" | "dinner";
-    start: string;
-    end: string;
-    people: number;
-  }[] = [
-    { key: "breakfast", start: "08:00", end: "10:30", people: 4 },
-    { key: "lunch", start: "12:30", end: "14:30", people: 3 },
-    { key: "dinner", start: "16:30", end: "20:00", people: 5 },
-  ];
+  /* Which meals this camp actually cooks. Not every camp feeds three times a
+     day — Shmifting leaves mornings and middays to people themselves and
+     gathers everyone for dinner — and generating shifts nobody will ever fill
+     makes the whole board read as understaffed forever (Bible §24). */
+  const wanted = new Set(formData.getAll("meals").map(String));
+  const crew = Number(formData.get("people") ?? 0);
+
+  const template = (
+    [
+      { key: "breakfast", start: "08:00", end: "10:30", people: 4 },
+      { key: "lunch", start: "12:30", end: "14:30", people: 3 },
+      { key: "dinner", start: "16:30", end: "20:00", people: 5 },
+    ] as const
+  )
+    .filter((slot) => wanted.has(slot.key))
+    .map((slot) => ({
+      ...slot,
+      people: Number.isFinite(crew) && crew > 0 ? crew : slot.people,
+    }));
+
+  if (template.length === 0) {
+    return { error: "צריך לבחור לפחות ארוחה אחת" };
+  }
 
   const [{ count } = { count: 0 }] = await db
     .select({ count: sql<number>`count(*)` })
