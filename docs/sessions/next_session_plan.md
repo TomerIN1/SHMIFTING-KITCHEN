@@ -86,20 +86,48 @@ empty, and that stops being true the moment real people join.
 
 ---
 
-## 0B. THE PRODUCT IS DEPLOYED — AND NOBODY HAS SIGNED UP YET
+## 0A. LIVE CAMP STATE (keep this accurate — it is the real camp now)
+
+| | |
+|---|---|
+| URL | **https://shmifting-kitchen.vercel.app** |
+| Kitchen Lead | תומר נבו `<tomerikoka@gmail.com>` — the only account |
+| invite code | **`SHMIFT2026`** (changed from the `SHMIFT` default) |
+| camp name | `SHMIFTING` — still the default |
+| departure | **2 Nov 2026**, so the countdown is real |
+| festival | **2–7 Nov 2026**, Midburn at Mount Tzin |
+| expectedDiners | **46 — still the schema default, still wrong** |
+
+**Midburn 2026 is 2–7 November** (city opening 2 Nov, effigy burn 5 Nov, camp
+and art build opens 28 Oct). Confirmed against Midburn's own FAQ. The camp
+chose to travel on the 2nd, so `departureDate` and `festivalStart` are the same
+date — that is deliberate, not a copy-paste.
+
+**`expectedDiners` is the one number still wrong.** It multiplies every recipe
+quantity, so the shopping list and the whole budget scale off it. Raise it with
+the Lead before anybody costs a meal.
+
+**Several admins is already supported** and needed no work: HQ → הגדרות lists
+everybody with a toggle between שמיפטר.ית and מנהל.ת מטבח, and
+`app/hq/settings/actions.ts` refuses to let the last admin demote themselves.
+It has never been exercised with a second account, because there is only one —
+worth watching the first time somebody is promoted.
+
+---
+
+## 0B. THE PRODUCT IS DEPLOYED
 
 **https://shmifting-kitchen.vercel.app** is live on Turso. Full detail in
 `project_summary.md` §8B.
 
-**The single most important thing right now: the `users` table is empty, and
-the first person to sign up becomes the Kitchen Lead.** Whoever registers first
-owns the camp. Tomer must create his account before the invite code goes
-anywhere near a group chat. The invite code is `SHMIFT` and the camp is called
-`SHMIFTING` — both defaults, both changeable in HQ → הגדרות, and the code should
-be changed before sharing.
+Tomer has registered and holds the Kitchen Lead role, and the invite code has
+been rotated off its default. Current state is the table in §0A above.
 
-`expectedDiners` defaults to **46**, which is a schema default and not a real
-head count. It multiplies every recipe quantity, so it wants correcting early.
+**Sign-up was broken and is now fixed.** `AUTH_SECRET` was present on Vercel but
+empty, so every registration wrote the user row and the food profile and then
+threw while signing the session cookie — a 500, no way in, and an account that
+silently existed. Watch for that shape: an env var that exists but is blank
+looks configured everywhere you would think to look.
 
 Local development still works unchanged, but read the warning about
 `guard-remote.ts` in `project_summary.md` §8B before running any `db:` script —
