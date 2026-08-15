@@ -40,13 +40,35 @@ the code — both would have shipped silently:
   `UserBadge.tsx`. Only the Kitchen Lead ever saw it, since the door is
   admin-only on the camp side.
 
-**Video (§2C below) — still blocked, but re-aimed.** `scripts/animate-assets.mjs`
-now uses **Seedance 1.0 Pro** instead of Kling, at 1080p, with `camera_fixed:
-true` and `end_image_url` set to the same frame as `image_url` so the clip ends
-where it began and loops with no seam. Read §2C for the account problem.
+**Video — done. The Home hero is alive.** `scripts/animate-assets.mjs` now uses
+**Seedance 1.0 Pro** at 1080p with `camera_fixed: true` and `end_image_url` set
+to the same frame as `image_url`, so the clip closes its own loop.
+
+The four `403 · exhausted balance` failures were **never a billing problem**.
+`import "dotenv/config"` reads only `.env`, and the working key lives in
+`.env.local` — so the script was authenticating as a different, empty account.
+Loading both files in Next's order fixed it on the first try. Recorded as a
+gotcha in `project_summary.md` §8; it will catch the next script too.
+
+Two things were then found by looking at the output rather than trusting it:
+
+- **The first take came back 4:3** because `aspect_ratio: "auto"` chose it, and
+  the model reached 4:3 by cropping the **sides** — the eye in the sun was cut
+  in half and the cactus and carrot were gone. Re-rolled at `"16:9"`, which
+  trims height and keeps the full composition. The clip table now carries a
+  per-clip `aspect`, defaulting to `"auto"`.
+- **fal returns ~25 MB for five seconds.** Transcoded to 2.79 MB before it went
+  anywhere near the repo. See `project_summary.md` §5 for the command.
+
+Known and accepted: the steam ribbon differs slightly between the first and last
+frame, so that one element nudges at the loop point. Invisible at full speed
+behind the countdown card and the gradient. A re-roll with another seed is the
+fix if it ever bothers anyone.
 
 Not started this session: **§2A recipes-before-voting** and **§2D the screen-by-
-screen QA**, including the empty-state pass. Those are still the next work.
+screen QA**, including the empty-state pass. Those are still the next work, and
+§2D's empty-state pass is the time-sensitive one — the database is still nearly
+empty, and that stops being true the moment real people join.
 
 ---
 
@@ -157,11 +179,19 @@ Do not quietly pick one. Committing generated music under an ambiguous permissio
 
 ---
 
-### 2C. VIDEO CLIPS ON THE MAIN PAGE — still blocked on the FAL account
+### 2C. VIDEO CLIPS ON THE MAIN PAGE — ✅ hero-home DONE IN SESSION 2
 
-**Session 2 status.** The user asked for the main-page hero clip specifically,
-using "seedance top quality", looping first frame to last. The script was
-re-aimed accordingly and is ready to run:
+`hero-locked` and `flame-lit` are still defined and ungenerated. To add either,
+give it an `aspect` if its artwork is not 16:9, then
+`npm run assets:animate -- --only=<name>` and **transcode before committing**.
+
+`flame-lit` needs thought before spending on it: it is a small square token, and
+`AmbientPoster` is an async Server Component, so it cannot be dropped into the
+`"use client"` voting board as-is. The lock screens in
+`app/hq/readiness/LockKitchen.tsx` have the same problem.
+
+**How hero-home was produced,** kept because the reasoning applies to both
+remaining clips:
 
 - model is now `fal-ai/bytedance/seedance/v1/pro/image-to-video` at `1080p`;
 - `camera_fixed: true` pins the camera natively instead of asking the prompt to;
@@ -170,37 +200,29 @@ re-aimed accordingly and is ready to run:
 - the **Pro** endpoint is required — on Lite, `end_image_url` is deprecated and
   ignored, so the loop would silently not happen.
 
-**It still cannot run.** Three attempts, before and after the model change:
+**The `403 · exhausted balance` wall was a false alarm — do not chase billing
+if you see it again.** Four attempts failed with:
 
 ```
 403 {"detail":"User is locked. Reason: Exhausted balance."}
 ```
 
-The user stated twice that the account has credits. The key is not the problem —
-a wrong key returns 401, and this returns 403 with an account-level lock, so the
-key authenticates and the account it belongs to is the one that is out of
-balance. The likely explanation is that the credits were added to a **different
-fal account** than the one this key belongs to, or that the lock has not cleared.
-Resolving it needs someone to check fal.ai/dashboard/billing **while signed in as
-the owner of this key** — it cannot be diagnosed from inside the repo, and
-`.env` must not be read (CLAUDE.md §0.3).
+The account was funded the whole time. `import "dotenv/config"` loads **only**
+`.env`, and the usable `FAL_KEY` is in **`.env.local`** — so the script was
+authenticating as a different, empty account and reporting a billing error that
+was really a config error. Loading `[.env.local, .env]` in Next's order fixed it
+immediately. A wrong key gives 401 and an unfunded one gives 403, so the status
+code alone will not tell you which account you are on.
 
-Once it runs: `npm run assets:animate -- --only=hero-home`. Nothing else is
-needed — `lib/motion.ts` detects the file at request time and the Home already
-renders `AmbientPoster`.
+### The rest of the plumbing (unchanged since session 1)
 
-The original session-1 notes follow.
-
-- `scripts/animate-assets.mjs` defines three clips (`hero-home`, `hero-locked`, `flame-lit`) with prompts constrained to ambient motion only — no camera moves, no new objects (Design Book §48).
-- `lib/motion.ts` detects `public/motion/<name>.mp4` at request time.
-- `components/shmifting/AmbientPoster.tsx` plays the clip over the still poster, muted, looping, hidden entirely under `prefers-reduced-motion` (§50).
-- **The Shmifter Home already uses `AmbientPoster`.** It comes alive with no code change.
-
-```
-403 {"detail":"User is locked. Reason: Exhausted balance."}
-```
-
-**To finish:** top up at fal.ai/dashboard/billing, then `npm run assets:animate`.
+- `lib/motion.ts` detects `public/motion/<name>.mp4` at request time — no build
+  step, no config. Drop a file in and the page uses it.
+- `components/shmifting/AmbientPoster.tsx` renders the still and, when a clip
+  exists, `AmbientVideo` over it.
+- **The Shmifter Home already uses `AmbientPoster`.** A new clip needs no code.
+- Prompts stay constrained to ambient motion only — no camera moves, no new
+  objects (Design Book §48).
 
 To add more clips: append to `CLIPS`, then swap that page's `<Image>` for `<AmbientPoster>`. Note `AmbientPoster` is an **async Server Component** — it cannot be dropped into a `"use client"` file. The lock screens in `app/hq/readiness/LockKitchen.tsx` are client components and still use plain `<Image>`; converting them means lifting the video decision up into the server page.
 

@@ -145,6 +145,34 @@ Visual grammar, expressed as utilities: `shm-outline` (2.5px ink border), `shm-l
 
 **Crossing between the two experiences.** `UserBadge` takes a `context` prop (`"member"` | `"hq"`) and shows the door to the *other* side: the camp header offers "מטבח HQ" to admins, the HQ header offers "חזרה לקמפ" to everyone. Both are needed — the Kitchen Lead is also a camp member with a profile, votes and shifts, so they move between the two sides constantly. Pass `context="hq"` in `app/hq/layout.tsx`; the default is `"member"`.
 
+### Ambient motion
+
+`public/motion/hero-home.mp4` — 960 × 544, 5.04 s, 2.79 MB — plays behind the
+countdown on the Shmifter Home. Produced by `npm run assets:animate` from
+`hero-home.webp` via **Seedance 1.0 Pro** on fal.
+
+Three things about it are load-bearing:
+
+- **It loops.** `end_image_url` is set to the same frame as `image_url`, so the
+  clip ends where it began. This needs the **Pro** endpoint — on Lite that field
+  is deprecated and silently ignored. The one imperfection is the steam, whose
+  ribbon differs slightly between first and last frame; invisible at full speed
+  behind the gradient, obvious at quarter speed.
+- **`aspect_ratio` is `"16:9"`, not `"auto"`, and the clip definition carries it.**
+  The artwork is 3:2 and the enum has no 3:2, so something is always trimmed.
+  "auto" chose 4:3 and trimmed the **sides**, cutting the eye in the sun in half
+  and losing the cactus and carrot — the poster's composition (§12). 16:9 trims
+  height instead, and matches the ~1.89 box the Home renders the poster in.
+- **fal returns ~25 MB.** That never enters the repo. Transcode before committing:
+  `avconvert -s big.mp4 -p Preset960x540 -o small.mp4 --replace --multiPass`
+  (no ffmpeg on this machine; `avconvert` ships with macOS). A heavy dark
+  gradient covers the clip, so the lost detail is detail nobody can see.
+
+`AmbientVideo.tsx` is a **client** component for one reason: someone who asked
+for reduced motion must not receive the element at all. Hiding it with CSS still
+downloads and decodes every frame, which is 2.8 MB of desert mobile data and a
+warm phone spent on something they will never see.
+
 ### Ambient sound
 
 `components/shmifting/AmbientSound.tsx`, mounted in the **camp header only** —
@@ -201,9 +229,9 @@ because two of these need a decision before any code:
 2. ~~**Ambient music.**~~ **Done in session 2.** The user supplied three tracks
    from mixkit.co, so the FAL-permission question in §0.3 never had to be
    answered — nothing was generated. See §5 "Ambient sound".
-3. **Video on the main page.** Built end to end and now pointed at Seedance 1.0
-   Pro with a closed loop; still waiting on the FAL account, which returns
-   `403 User is locked. Reason: Exhausted balance.`
+3. ~~**Video on the main page.**~~ **Done in session 2.** The Home hero is alive.
+   See §5 "Ambient motion". `hero-locked` and `flame-lit` are still defined but
+   ungenerated.
 4. **A systematic pass over every screen**, continuing the visual QA that found
    four real defects in session 1.
 
@@ -229,6 +257,7 @@ because two of these need a decision before any code:
 - **`server-only` breaks standalone `tsx` scripts.** Anything importing `lib/data/*` only runs inside Next. Verify domain logic through the browser, or write a script against `lib/domain/*` (pure) instead.
 - **Ingredient cost is quoted per `ingredients.defaultUnit`.** Aggregation may land on a different unit in the same dimension (500 g rather than 0.5 kg). `convertUnitCost()` restates the price. Skipping it produced a ₪39,894 projection instead of ~₪1,600.
 - **`.env` is off limits** (CLAUDE.md §0.3). `AUTH_SECRET` was added to `.env.local` instead, which Next also loads and which takes precedence.
+- **Standalone scripts must load `.env.local` too, not just `.env`.** A bare `import "dotenv/config"` reads only `.env`. The working `FAL_KEY` lives in `.env.local`, so the animator spent an hour returning `403 · account locked, exhausted balance` — which reads exactly like a billing problem and is not one. `scripts/animate-assets.mjs` now loads `[.env.local, .env]` in that order, matching Next. Any new script touching secrets should do the same.
 - **`create-next-app` overwrites `CLAUDE.md`** with a pointer to `AGENTS.md`. Ours now starts with `@AGENTS.md` and keeps the constitution below it.
 - **Route groups collide with `app/page.tsx`.** The scaffold's placeholder had to be deleted for `(shmifter)/page.tsx` to own `/`.
 

@@ -21,12 +21,21 @@
      node scripts/animate-assets.mjs --list
    ========================================================================= */
 
-import "dotenv/config";
+import dotenv from "dotenv";
 import { readFile, writeFile, mkdir, access } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+/* Next loads .env.local ahead of .env, and this script has to agree with it:
+   a key updated in one file but read from the other fails in a way that looks
+   exactly like a billing problem. First file wins, so .env.local takes
+   precedence. The values are used, never inspected (CLAUDE.md §0.3). */
+dotenv.config({
+  path: [join(ROOT, ".env.local"), join(ROOT, ".env")],
+  quiet: true,
+});
 const ASSETS = join(ROOT, "public", "assets");
 const OUT = join(ROOT, "public", "motion");
 
@@ -43,12 +52,12 @@ const OUT = join(ROOT, "public", "motion");
 
    The Pro endpoint is required for the loop: on the Lite endpoint
    `end_image_url` is deprecated and ignored. */
-const MODEL = "fal-ai/bytedance/seedance/v1/pro/image-to-video";
-const RESOLUTION = "1080p";
+export const MODEL = "fal-ai/bytedance/seedance/v1/pro/image-to-video";
+export const RESOLUTION = "1080p";
 
 /* Shared constraint. Repeated in every prompt because these models drift
    toward cinematic camera work if you let them. */
-const MOTION_RULES = `
+export const MOTION_RULES = `
 The camera does NOT move: no pan, no zoom, no dolly, no parallax, no rack
 focus. The composition, the colours and the flat screen-printed illustration
 style stay exactly as they are in the source frame. Nothing new enters the
@@ -58,12 +67,20 @@ The motion is a loop: the final frame must match the opening frame exactly,
 so the clip can repeat forever without a visible cut.
 `.trim();
 
-const CLIPS = [
+export const CLIPS = [
   {
     name: "hero-home",
     source: "hero-home.webp",
     purpose: "Shmifter Home — the world breathing behind the countdown",
     duration: "5",
+    /* The artwork is 3:2 and the enum has no 3:2, so something gets trimmed
+       either way — the only question is what. "auto" picked 4:3 and took it
+       out of the SIDES, which cut the eye in the sun in half and threw away
+       the cactus and carrot at the edges: the poster's whole composition
+       (CLAUDE.md §12). 16:9 trims height instead and keeps the full width,
+       and it is also much closer to the ~1.89 box the Home actually renders
+       the poster in, so the video and the still frame agree. */
+    aspect: "16:9",
     prompt: `Subtle ambient life inside a flat illustrated poster. The steam
 rising from the pot drifts and curls upward very slowly. The small flames of
 the campfire flicker gently. The stars and small dots twinkle softly, fading in
@@ -96,12 +113,19 @@ keeps its shape and its layered colours.`,
 
 /* ------------------------------------------------------------------------ */
 
+/* The clip table above is also read by the pre-flight preview, which renders
+   the exact request this script will send before any credits are spent. So
+   the module has to be importable: everything below only runs when the file
+   is invoked directly, never when something imports CLIPS from it. */
+const isEntry =
+  import.meta.url === pathToFileURL(process.argv[1] ?? "").href;
+
 const argv = process.argv.slice(2);
 const onlyArg = argv.find((a) => a.startsWith("--only="));
 const only = onlyArg ? onlyArg.slice(7).split(",").map((s) => s.trim()) : null;
 const force = argv.includes("--force");
 
-if (argv.includes("--list")) {
+if (isEntry && argv.includes("--list")) {
   for (const c of CLIPS) {
     console.log(`${c.name.padEnd(14)} ← ${c.source.padEnd(20)} ${c.purpose}`);
   }
@@ -109,7 +133,7 @@ if (argv.includes("--list")) {
 }
 
 const KEY = process.env.FAL_KEY;
-if (!KEY) {
+if (isEntry && !KEY) {
   console.error(
     "FAL_KEY is not set. It lives in .env — this script reads it from the\n" +
       "environment and never inspects the file (CLAUDE.md §0.3).",
@@ -148,7 +172,7 @@ async function submit(clip) {
       duration: clip.duration,
       resolution: RESOLUTION,
       camera_fixed: true,
-      aspect_ratio: "auto",
+      aspect_ratio: clip.aspect ?? "auto",
     }),
   });
 
@@ -251,4 +275,4 @@ async function main() {
   }
 }
 
-main();
+if (isEntry) main();

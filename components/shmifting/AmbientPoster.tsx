@@ -1,5 +1,6 @@
 import Image, { type StaticImageData } from "next/image";
 import { hasMotion, motionSrc } from "@/lib/motion";
+import { AmbientVideo } from "./AmbientVideo";
 import { cn } from "@/lib/utils";
 
 /* ============================================================================
@@ -10,9 +11,12 @@ import { cn } from "@/lib/utils";
    §50: "Respect reduced-motion preferences."
 
    The still image is always rendered and always the poster frame. When a
-   motion clip exists it plays on top, muted and looping, and it is removed
-   entirely for anyone who asked their system for reduced motion — the
-   `motion-reduce:hidden` class means those users get the poster, full stop.
+   motion clip exists it plays on top, muted and looping. If no clip exists,
+   the still is the whole experience and nothing about the page changes.
+
+   Anyone who asked their system for reduced motion never receives the video
+   element at all — see AmbientVideo, which is a client component for exactly
+   that reason. Hiding it with CSS would still have cost them the download.
    ========================================================================= */
 
 export async function AmbientPoster({
@@ -43,22 +47,7 @@ export async function AmbientPoster({
         sizes={sizes}
         className={cn("absolute inset-0 h-full w-full object-cover", className)}
       />
-      {alive && (
-        <video
-          aria-hidden
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="none"
-          className={cn(
-            "absolute inset-0 h-full w-full object-cover motion-reduce:hidden",
-            className,
-          )}
-        >
-          <source src={motionSrc(name)} type="video/mp4" />
-        </video>
-      )}
+      {alive && <AmbientVideo src={motionSrc(name)} className={className} />}
     </>
   );
 }
