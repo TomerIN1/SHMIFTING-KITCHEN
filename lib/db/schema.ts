@@ -213,6 +213,12 @@ export const voteOptions = sqliteTable(
        time these are still concepts, not yet operational dish records. */
     dishes: text("dishes"),
     dietaryNote: text("dietary_note"),
+    /* Cross-cutting labels — spicy, contains gluten, gluten-free. Diet is NOT
+       in here; it has its own column below, so "vegan" has one home. */
+    tags: text("tags", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'`),
     /* Structured, not just prose, so "does every night have a vegan main?"
        is a question the product can answer instead of one somebody has to
        re-read the notes to check (Bible §17, §22). */

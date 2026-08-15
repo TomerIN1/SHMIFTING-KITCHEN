@@ -42,6 +42,7 @@ export interface RoundResult {
     dishes: string | null;
     dietaryNote: string | null;
     dietary: string;
+    tags: string[];
     mealDate: Date | null;
     imageUrl: string | null;
     accent: string;
@@ -69,6 +70,7 @@ export async function summariseRound(round: RoundRow): Promise<RoundResult> {
       description: option.description,
       dishes: option.dishes,
       dietary: option.dietary,
+      tags: option.tags,
       mealDate: option.mealDate,
       dietaryNote: option.dietaryNote,
       imageUrl: option.imageUrl,

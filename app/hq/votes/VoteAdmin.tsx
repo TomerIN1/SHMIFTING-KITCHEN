@@ -19,6 +19,8 @@ import {
   ToolTextArea,
 } from "@/components/shmifting/Field";
 import { Glyph } from "@/components/shmifting/Glyph";
+import { OptionTags } from "@/components/shmifting/OptionTags";
+import { OPTION_TAG_KEYS, optionTagLabel } from "@/lib/domain/categories";
 import { MEAL_TYPES } from "@/lib/domain/categories";
 import { cn } from "@/lib/utils";
 
@@ -247,6 +249,7 @@ export function OptionEditor({
     dishes: string | null;
     dietaryNote: string | null;
     dietary: string;
+    tags: string[];
     mealDate: Date | null;
     flames: number;
     share: number;
@@ -323,6 +326,27 @@ export function OptionEditor({
                   <option value="vegan">טבעוני</option>
                 </ToolSelect>
               </label>
+              <fieldset className="block sm:col-span-2">
+                <legend className="mb-1.5 text-[12px] text-cream-dim">
+                  תגיות
+                </legend>
+                <div className="flex flex-wrap gap-3">
+                  {OPTION_TAG_KEYS.map((tag) => (
+                    <label
+                      key={tag}
+                      className="flex items-center gap-1.5 text-[13px] text-cream-2"
+                    >
+                      <input
+                        type="checkbox"
+                        name="tags"
+                        value={tag}
+                        className="h-4 w-4 accent-sun"
+                      />
+                      {optionTagLabel(tag)}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <label className="block">
                 <span className="mb-1 block text-[12px] text-cream-dim">
                   באיזה ערב
@@ -367,6 +391,7 @@ function OptionRow({
     dishes: string | null;
     dietaryNote: string | null;
     dietary: string;
+    tags: string[];
     mealDate: Date | null;
     flames: number;
     share: number;
@@ -401,6 +426,26 @@ function OptionRow({
             defaultValue={option.dietaryNote ?? ""}
             maxLength={120}
           />
+          <fieldset className="block sm:col-span-2">
+            <legend className="mb-1.5 text-[12px] text-cream-dim">תגיות</legend>
+            <div className="flex flex-wrap gap-3">
+              {OPTION_TAG_KEYS.map((tag) => (
+                <label
+                  key={tag}
+                  className="flex items-center gap-1.5 text-[13px] text-cream-2"
+                >
+                  <input
+                    type="checkbox"
+                    name="tags"
+                    value={tag}
+                    defaultChecked={(option.tags ?? []).includes(tag)}
+                    className="h-4 w-4 accent-sun"
+                  />
+                  {optionTagLabel(tag)}
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <label className="block">
             <span className="mb-1 block text-[12px] text-cream-dim">תזונה</span>
             <ToolSelect name="dietary" defaultValue={option.dietary ?? "omnivore"}>
@@ -489,6 +534,14 @@ function OptionRow({
           )}
         </div>
       </div>
+
+      {/* Diet and tags, so the Lead can see at a glance that every night has
+          a vegan main without opening each idea. */}
+      <OptionTags
+        dietary={option.dietary}
+        tags={option.tags}
+        className="mt-2"
+      />
 
       {option.dishes && (
         <ul className="mt-2 flex flex-wrap gap-1.5">

@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { voteRounds, voteOptions, users } from "@/lib/db/schema";
 import { assertAdmin } from "@/lib/auth/guard";
 import { newId } from "@/lib/utils";
+import { isOptionTag } from "@/lib/domain/categories";
 
 export interface VoteAdminState {
   error?: string;
@@ -163,6 +164,13 @@ function optionDate(formData: FormData): Date | null {
 }
 
 
+function optionTags(formData: FormData): string[] {
+  return formData
+    .getAll("tags")
+    .map(String)
+    .filter((t) => isOptionTag(t));
+}
+
 function optionDietary(formData: FormData): "omnivore" | "vegetarian" | "vegan" {
   const raw = String(formData.get("dietary") ?? "omnivore");
   return raw === "vegan" || raw === "vegetarian" ? raw : "omnivore";
@@ -194,6 +202,7 @@ export async function addOption(
     dietaryNote: String(formData.get("dietaryNote") ?? "").trim() || null,
     mealDate: optionDate(formData),
     dietary: optionDietary(formData),
+    tags: optionTags(formData),
     accent: palette[count % palette.length],
     sortOrder: count,
   });
@@ -216,6 +225,7 @@ export async function updateOption(formData: FormData): Promise<void> {
       dietaryNote: String(formData.get("dietaryNote") ?? "").trim() || null,
       mealDate: optionDate(formData),
       dietary: optionDietary(formData),
+      tags: optionTags(formData),
     })
     .where(eq(voteOptions.id, id));
 

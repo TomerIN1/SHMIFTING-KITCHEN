@@ -38,7 +38,7 @@ type Diet = "omnivore" | "vegetarian" | "vegan";
 interface Night {
   title: string;
   subtitle: string;
-  mains: { title: string; note: string; dietary: Diet }[];
+  mains: { title: string; note: string; dietary: Diet; tags?: string[] }[];
 }
 
 const NIGHTS: Night[] = [
@@ -46,12 +46,12 @@ const NIGHTS: Night[] = [
     title: "הערב הישראלי",
     subtitle: "הערב שבו המדבר מרגיש כמו המטבח של אמא. מה עושים?",
     mains: [
-      { title: "שניצלים", note: "מטוגנים במקום · פירה · סלט קצוץ דק · לימון", dietary: "omnivore" },
-      { title: "קוסקוס עם ירקות ובשר", note: "סיר אחד גדול · מרק ירקות · חריף בצד", dietary: "omnivore" },
-      { title: "מעורב ירושלמי", note: "בפיתות · בצל · טחינה · חמוצים", dietary: "omnivore" },
-      { title: "סביח", note: "חצילים מטוגנים · ביצה קשה · עמבה · סלט", dietary: "vegetarian" },
-      { title: "פלאפל", note: "מטוגן במקום · פיתות · חמישה סלטים · טחינה", dietary: "vegan" },
-      { title: "חומוס חם עם גרגרים", note: "מסולת · פול · שמן זית · פיתות חמות", dietary: "vegan" },
+      { title: "שניצלים", note: "מטוגנים במקום · פירה · סלט קצוץ דק · לימון", dietary: "omnivore", tags: ["gluten"] },
+      { title: "קוסקוס עם ירקות ובשר", note: "סיר אחד גדול · מרק ירקות · חריף בצד", dietary: "omnivore", tags: ["gluten"] },
+      { title: "מעורב ירושלמי", note: "בפיתות · בצל · טחינה · חמוצים", dietary: "omnivore", tags: ["gluten"] },
+      { title: "סביח", note: "חצילים מטוגנים · ביצה קשה · עמבה · סלט", dietary: "vegetarian", tags: ["gluten"] },
+      { title: "פלאפל", note: "מטוגן במקום · פיתות · חמישה סלטים · טחינה", dietary: "vegan", tags: ["gluten"] },
+      { title: "חומוס חם עם גרגרים", note: "מסולת · פול · שמן זית · פיתות חמות", dietary: "vegan", tags: ["gluten"] },
     ],
   },
   {
@@ -60,10 +60,10 @@ const NIGHTS: Night[] = [
     mains: [
       { title: "בטר צ׳יקן", note: "אורז בסמטי · יוגורט ומלפפון · נאן", dietary: "omnivore" },
       { title: "ביריאני עוף", note: "אורז מתובל בסיר אחד · רייתה · חמוצים", dietary: "omnivore" },
-      { title: "קימה מטר", note: "בשר טחון ואפונה · אורז · צ׳אפטי", dietary: "omnivore" },
+      { title: "קימה מטר", note: "בשר טחון ואפונה · אורז · צ׳אפטי", dietary: "omnivore", tags: ["spicy"] },
       { title: "פאלאק פאניר", note: "תרד וגבינה · אורז בסמטי · נאן", dietary: "vegetarian" },
-      { title: "דאל טאדקה", note: "עדשים בכמון וכוסברה · אורז · לימון כבוש", dietary: "vegan" },
-      { title: "צ׳אנה מסאלה", note: "חומוס ברוטב עגבניות · אורז · צ׳אפטי", dietary: "vegan" },
+      { title: "דאל טאדקה", note: "עדשים בכמון וכוסברה · אורז · לימון כבוש", dietary: "vegan", tags: ["gluten-free"] },
+      { title: "צ׳אנה מסאלה", note: "חומוס ברוטב עגבניות · אורז · צ׳אפטי", dietary: "vegan", tags: ["spicy"] },
     ],
   },
   {
@@ -72,46 +72,58 @@ const NIGHTS: Night[] = [
     mains: [
       { title: "פרגיות בשיפודים", note: "פיתות · טחינה · חמוצים · בצל סגול", dietary: "omnivore" },
       { title: "קבב", note: "על הרשת · לאפות · סלט ערבי · עמבה", dietary: "omnivore" },
-      { title: "אנטריקוט", note: "נתחים על הגחלים · צ׳ימיצ׳ורי · תפוחי אדמה", dietary: "omnivore" },
+      { title: "אנטריקוט", note: "נתחים על הגחלים · צ׳ימיצ׳ורי · תפוחי אדמה", dietary: "omnivore", tags: ["gluten-free"] },
       { title: "כנפיים בדבש", note: "צרובות · סלט כרוב · לחם שום", dietary: "omnivore" },
-      { title: "חצילים שלמים על הגחלים", note: "טחינה · רימונים · לאפות", dietary: "vegan" },
-      { title: "שיפודי טופו וירקות", note: "מרינדה חריפה · אורז · בוטנים", dietary: "vegan" },
+      { title: "חצילים שלמים על הגחלים", note: "טחינה · רימונים · לאפות", dietary: "vegan", tags: ["gluten-free"] },
+      { title: "שיפודי טופו וירקות", note: "מרינדה חריפה · אורז · בוטנים", dietary: "vegan", tags: ["spicy", "gluten-free"] },
     ],
   },
   {
     title: "ערב מקסיקני",
     subtitle: "כל אחד בונה לעצמו. הכי מהיר להאכיל בו את כל הקמפ.",
     mains: [
-      { title: "טאקוס בשר טחון", note: "טורטיות · גוואקמולי · סלסה · לימון", dietary: "omnivore" },
+      { title: "טאקוס בשר טחון", note: "טורטיות · גוואקמולי · סלסה · לימון", dietary: "omnivore", tags: ["gluten-free"] },
       { title: "בוריטו עוף", note: "אורז · שעועית · גבינה · סלסה ורדה", dietary: "omnivore" },
       { title: "פחיטס בקר", note: "פלפלים ובצל על הפלנצ׳ה · טורטיות", dietary: "omnivore" },
       { title: "אנצ׳ילדס גבינה", note: "ברוטב עגבניות · שמנת חמוצה · כוסברה", dietary: "vegetarian" },
-      { title: "טאקוס שעועית שחורה ובטטה", note: "בטטה צרובה · גוואקמולי · סלסה", dietary: "vegan" },
-      { title: "צ׳ילי סין קרנה", note: "שעועית בסיר אחד · אורז · טורטיה צלויה", dietary: "vegan" },
+      { title: "טאקוס שעועית שחורה ובטטה", note: "בטטה צרובה · גוואקמולי · סלסה", dietary: "vegan", tags: ["gluten-free"] },
+      { title: "צ׳ילי סין קרנה", note: "שעועית בסיר אחד · אורז · טורטיה צלויה", dietary: "vegan", tags: ["spicy", "gluten-free"] },
     ],
   },
   {
     title: "ערב אמריקאי",
     subtitle: "בורגרים, ורוטב שנוזל על הידיים. בלי להתנצל.",
     mains: [
-      { title: "המבורגר בקר", note: "על הפלנצ׳ה · לחמניות · בצל מקורמל · צ׳יפס", dietary: "omnivore" },
-      { title: "פולד ביף", note: "מתפרק אחרי שעות · קולסלו · לחמניות", dietary: "omnivore" },
-      { title: "כנפיים באפלו", note: "חריף · סלרי · רוטב לבן", dietary: "omnivore" },
-      { title: "מק אנד צ׳יז", note: "בסיר ענק · פירורים קראנצ׳יים · סלט ירוק", dietary: "vegetarian" },
-      { title: "בורגר עדשים וסלק", note: "לחמניות · חמוצים · טחינה חריפה · צ׳יפס", dietary: "vegan" },
-      { title: "צ׳ילי שעועית", note: "מתבשל לאט · אורז · בצל ולימון", dietary: "vegan" },
+      { title: "המבורגר בקר", note: "על הפלנצ׳ה · לחמניות · בצל מקורמל · צ׳יפס", dietary: "omnivore", tags: ["gluten"] },
+      { title: "פולד ביף", note: "מתפרק אחרי שעות · קולסלו · לחמניות", dietary: "omnivore", tags: ["gluten"] },
+      { title: "כנפיים באפלו", note: "חריף · סלרי · רוטב לבן", dietary: "omnivore", tags: ["spicy"] },
+      { title: "מק אנד צ׳יז", note: "בסיר ענק · פירורים קראנצ׳יים · סלט ירוק", dietary: "vegetarian", tags: ["gluten"] },
+      { title: "בורגר עדשים וסלק", note: "לחמניות · חמוצים · טחינה חריפה · צ׳יפס", dietary: "vegan", tags: ["gluten"] },
+      { title: "צ׳ילי שעועית", note: "מתבשל לאט · אורז · בצל ולימון", dietary: "vegan", tags: ["spicy", "gluten-free"] },
     ],
   },
   {
     title: "ערב תאילנדי",
     subtitle: "חריף, חמצמץ ומרענן — בדיוק כשנמאס מהאבק.",
     mains: [
-      { title: "קארי אדום עם עוף", note: "קוקוס · אורז יסמין · בזיליקום תאילנדי", dietary: "omnivore" },
+      { title: "קארי אדום עם עוף", note: "קוקוס · אורז יסמין · בזיליקום תאילנדי", dietary: "omnivore", tags: ["spicy", "gluten-free"] },
       { title: "פאד תאי עוף", note: "אטריות אורז · בוטנים · לימון · נבטים", dietary: "omnivore" },
-      { title: "פאד קרפאו", note: "בשר טחון ובזיליקום חריף · אורז · ביצת עין", dietary: "omnivore" },
+      { title: "פאד קרפאו", note: "בשר טחון ובזיליקום חריף · אורז · ביצת עין", dietary: "omnivore", tags: ["spicy"] },
       { title: "קארי מסאמן", note: "בקר מתפרק · תפוחי אדמה · בוטנים · אורז", dietary: "omnivore" },
-      { title: "קארי ירוק ירקות וטופו", note: "קוקוס · חצילים · אורז יסמין", dietary: "vegan" },
-      { title: "פאד תאי טופו", note: "בלי רוטב דגים · בוטנים · לימון · צ׳ילי", dietary: "vegan" },
+      { title: "קארי ירוק ירקות וטופו", note: "קוקוס · חצילים · אורז יסמין", dietary: "vegan", tags: ["spicy", "gluten-free"] },
+      { title: "פאד תאי טופו", note: "בלי רוטב דגים · בוטנים · לימון · צ׳ילי", dietary: "vegan", tags: ["gluten-free"] },
+    ],
+  },
+  {
+    title: "ערב איטלקי",
+    subtitle: "פסטה לכל הקמפ מסיר אחד. הדבר הכי מנחם שיש.",
+    mains: [
+      { title: "לזניה בשר", note: "בתבנית ענקית · סלט ירוק · לחם שום", dietary: "omnivore", tags: ["gluten"] },
+      { title: "פסטה בולונז", note: "מתבשל שעות · פרמזן · בזיליקום", dietary: "omnivore", tags: ["gluten"] },
+      { title: "ריזוטו פטריות", note: "בסיר אחד · פרמזן · שמן כמהין", dietary: "vegetarian", tags: ["gluten-free"] },
+      { title: "פסטה ארביאטה", note: "עגבניות · שום · צ׳ילי · פטרוזיליה", dietary: "vegan", tags: ["spicy", "gluten"] },
+      { title: "פסטה אליו אוליו", note: "שום · שמן זית · צ׳ילי · לימון", dietary: "vegan", tags: ["gluten"] },
+      { title: "קפונטה סיציליאנית", note: "חצילים מתוקים־חמוצים · פולנטה · בזיליקום", dietary: "vegan", tags: ["gluten-free"] },
     ],
   },
 ];
@@ -172,6 +184,7 @@ async function main() {
         title: main.title,
         dishes: main.note,
         dietary: main.dietary,
+        tags: main.tags ?? [],
         accent: palette[i % palette.length],
         sortOrder: i,
       });

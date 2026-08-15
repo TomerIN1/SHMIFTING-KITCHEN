@@ -95,3 +95,39 @@ export function dishRoleLabel(key: string): string {
 export function dishRoleOrder(key: string): number {
   return DISH_ROLES[key as keyof typeof DISH_ROLES]?.order ?? 9;
 }
+
+/* ---------------------------------------------------------------------------
+   OPTION TAGS
+
+   The cross-cutting labels a main course can carry, beyond what it is made of.
+   Deliberately NOT including vegan or vegetarian: those live in the `dietary`
+   column, which is the same vocabulary as food profiles, dishes and the
+   coverage engine. Storing "vegan" twice is how a dish ends up vegan in one
+   place and not the other, and the one that gets read is never the one that
+   got edited.
+
+   The board renders diet and tags together as one row of chips, so from a
+   member's side it is simply "what should I know about this before I vote".
+
+   `gluten` and `gluten-free` are both here on purpose. Silence is not an
+   answer to somebody who cannot eat wheat — an unlabelled dish means nobody
+   checked, which is different from "this is safe" (Bible §16).
+   ------------------------------------------------------------------------ */
+
+export const OPTION_TAGS = {
+  spicy: { he: "חריף", tone: "alarm" },
+  gluten: { he: "מכיל גלוטן", tone: "attention" },
+  "gluten-free": { he: "ללא גלוטן", tone: "good" },
+} as const;
+
+export type OptionTag = keyof typeof OPTION_TAGS;
+
+export const OPTION_TAG_KEYS = Object.keys(OPTION_TAGS) as OptionTag[];
+
+export function optionTagLabel(key: string): string {
+  return OPTION_TAGS[key as OptionTag]?.he ?? key;
+}
+
+export function isOptionTag(key: string): key is OptionTag {
+  return key in OPTION_TAGS;
+}
