@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth/session";
 import { campIsEmpty } from "@/lib/auth/actions";
@@ -6,6 +5,8 @@ import { getSettings } from "@/lib/data/camp";
 import { Wordmark } from "@/components/shmifting/Wordmark";
 import { Countdown } from "@/components/shmifting/Countdown";
 import { AuthForms } from "./AuthForms";
+import { AmbientPoster } from "@/components/shmifting/AmbientPoster";
+import { AmbientSound } from "@/components/shmifting/AmbientSound";
 import { HERO } from "@/components/shmifting/assets";
 
 
@@ -32,18 +33,27 @@ export default async function WelcomePage() {
     <main className="relative flex min-h-dvh flex-col lg:flex-row">
       {/* ---- The world ---------------------------------------------------- */}
       <div className="relative flex min-h-[52vh] flex-1 items-center justify-center overflow-hidden lg:min-h-dvh">
-        <Image
-          src={HERO.home}
-          alt=""
+        {/* The door is the first thing anybody sees, so the world is alive
+            here too — same clip as the Home, and still just the still poster
+            for anyone who asked for reduced motion. */}
+        <AmbientPoster
+          name="hero-home"
+          image={HERO.home}
           priority
-          placeholder="blur"
-          className="absolute inset-0 h-full w-full object-cover"
           sizes="(max-width: 1024px) 100vw, 55vw"
         />
         <div
           aria-hidden
           className="absolute inset-0 bg-[radial-gradient(115%_90%_at_50%_30%,rgba(18,19,26,0.22),rgba(18,19,26,0.88)_75%)]"
         />
+
+        {/* Sound before you have an account: the camp should be playing when
+            you walk in, not once you have filled in a form. There is no header
+            out here to hang the control on, so it sits in the corner of the
+            poster — still one button, still switchable off (§51). */}
+        <div className="absolute start-4 top-4 z-10">
+          <AmbientSound />
+        </div>
 
         <div className="relative flex flex-col items-center gap-7 px-6 py-14 text-center">
           <Wordmark withTagline priority className="w-[min(78vw,460px)]" />
