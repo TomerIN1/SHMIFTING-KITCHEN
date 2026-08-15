@@ -5,12 +5,12 @@ import { db } from "@/lib/db";
 import { voteOptions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getOptionDishes } from "@/lib/data/recipes";
+import { costEvening } from "@/lib/data/costing";
 import { defaultDiners, getSettings } from "@/lib/data/camp";
 import { DishList, type DishView } from "@/app/hq/menu/[id]/DishEditor";
 import { OptionTags } from "@/components/shmifting/OptionTags";
 import { Glyph } from "@/components/shmifting/Glyph";
 import { Panel } from "@/components/shmifting/surfaces";
-import { scaleRecipe } from "@/lib/domain/scaling";
 import { money } from "@/lib/utils";
 
 /* ============================================================================
@@ -63,36 +63,11 @@ export default async function CostEveningPage({
     ],
   }));
 
-  /* What this evening would cost if it won, at today's head count. Only
-     dishes that actually have a recipe can be priced — the rest are named
-     but unknown, and saying so is more useful than a confident total that
-     silently ignores half the plate. */
-  let costed = 0;
-  let evening = 0;
-  for (const dish of dishRows) {
-    if (!dish.recipe) continue;
-    costed++;
-    const scaled = scaleRecipe(
-      dish.recipe.baseServings,
-      diners,
-      dish.recipe.items.map((item) => ({
-        id: item.id,
-        ingredientId: item.ingredientId,
-        ingredientName: item.ingredient.name,
-        quantity: item.quantity,
-        unit: item.unit,
-        scaledOverride: item.scaledOverride,
-        defaultUnit: item.ingredient.defaultUnit,
-        estimatedUnitCost: item.ingredient.estimatedUnitCost,
-        category: item.ingredient.category,
-        allergens: item.ingredient.allergens,
-      })),
-    );
-    evening += scaled.totalCost;
-  }
-
-  const missing = dishRows.length - costed;
-  const perHead = diners > 0 ? evening / diners : 0;
+  /* One calculation, shared with the round summary — see lib/data/costing.ts.
+     Two copies would eventually disagree, and two different prices for the
+     same evening on two screens is worse than no price at all. */
+  const cost = await costEvening(option.id, diners);
+  const { total: evening, perHead, uncosted: missing } = cost;
 
   return (
     <div className="space-y-6">

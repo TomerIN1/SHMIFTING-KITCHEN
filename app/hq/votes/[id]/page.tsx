@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRounds, summariseRound } from "@/lib/data/votes";
 import { getSettings } from "@/lib/data/camp";
+import { getRoundProjection } from "@/lib/data/costing";
+import { Projection } from "./Projection";
 import { HqHeading, Metric, ProgressBar } from "@/components/hq/primitives";
 import { Panel } from "@/components/shmifting/surfaces";
 import { StatusChip } from "@/components/shmifting/Status";
@@ -20,7 +22,10 @@ export default async function RoundPage({ params }: PageProps<"/hq/votes/[id]">)
   const round = rounds.find((r) => r.id === id);
   if (!round) notFound();
 
-  const result = await summariseRound(round);
+  const [result, projection] = await Promise.all([
+    summariseRound(round),
+    getRoundProjection(round.id),
+  ]);
   const locked = Boolean(camp.lockedAt);
   const max = Math.max(1, ...result.options.map((o) => o.flames));
   const closed = round.status === "closed";
@@ -160,6 +165,9 @@ export default async function RoundPage({ params }: PageProps<"/hq/votes/[id]">)
           )}
         </div>
       </Panel>
+
+      {/* The money question, next to the votes that decide it. */}
+      {projection && <Projection data={projection} roundId={round.id} />}
 
       <Panel
         title="רעיונות"
