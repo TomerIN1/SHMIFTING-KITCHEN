@@ -10,7 +10,7 @@ import {
 } from "@/lib/domain/shopping";
 import { categoryOrder } from "@/lib/domain/categories";
 import { getMenu } from "./menu";
-import { getSettings } from "./camp";
+import { getSettings, defaultDiners } from "./camp";
 
 /* ============================================================================
    THE MASTER SHOPPING LIST — Bible §26
@@ -129,9 +129,10 @@ export function groupByCategory(rows: ShoppingRow[]) {
 
 export const getBudget = cache(async () => {
   const camp = await getSettings();
+  const diners = await defaultDiners();
   const { rows, summary } = await getShoppingList();
 
-  const totalBudget = camp.budgetPerPerson * camp.expectedDiners;
+  const totalBudget = camp.budgetPerPerson * diners;
   const projected = summary.estimatedTotal;
   const spent = rows
     .filter((r) => r.status === "bought")
@@ -147,7 +148,7 @@ export const getBudget = cache(async () => {
 
   return {
     currency: camp.currency,
-    diners: camp.expectedDiners,
+    diners,
     perPerson: camp.budgetPerPerson,
     totalBudget,
     projected,
@@ -156,8 +157,8 @@ export const getBudget = cache(async () => {
     committed: projected - spent,
     remaining: totalBudget - projected,
     overBudget: totalBudget > 0 && projected > totalBudget,
-    projectedPerPerson: camp.expectedDiners
-      ? projected / camp.expectedDiners
+    projectedPerPerson: diners
+      ? projected / diners
       : 0,
     reviewed: Boolean(camp.budgetReviewedAt),
     categories: [...byCategory.entries()]

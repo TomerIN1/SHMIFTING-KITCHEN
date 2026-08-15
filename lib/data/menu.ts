@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { meals } from "@/lib/db/schema";
 import { analyseMeal, type DishInput, type MealCoverage } from "@/lib/domain/coverage";
 import { mealTypeOrder } from "@/lib/domain/categories";
-import { getDiners, getSettings } from "./camp";
+import { getDiners, getSettings, defaultDiners } from "./camp";
 
 /* ============================================================================
    THE MENU, WITH ITS CONSEQUENCES ALREADY WORKED OUT
@@ -19,6 +19,7 @@ import { getDiners, getSettings } from "./camp";
 export const getMenu = cache(async () => {
   const camp = await getSettings();
   const diners = await getDiners();
+  const campDiners = await defaultDiners();
 
   const rows = await db.query.meals.findMany({
     orderBy: [asc(meals.date)],
@@ -52,7 +53,7 @@ export const getMenu = cache(async () => {
       hasRecipe: Boolean(dish.recipe),
     }));
 
-    const servings = meal.expectedDiners ?? camp.expectedDiners;
+    const servings = meal.expectedDiners ?? campDiners;
     const coverage = analyseMeal(dishInputs, diners);
 
     return { ...meal, servings, coverage, dishInputs };

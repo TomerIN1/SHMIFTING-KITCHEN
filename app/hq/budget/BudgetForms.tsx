@@ -9,14 +9,10 @@ import { money } from "@/lib/utils";
 
 const EMPTY: BudgetState = {};
 
-export function BudgetSettings({
-  perPerson,
-  diners,
-  currency,
-  locked,
-}: {
+export function BudgetSettings({ perPerson, diners, dinersOverride, currency, locked }: {
   perPerson: number;
   diners: number;
+  dinersOverride: number | null;
   currency: string;
   locked: boolean;
 }) {
@@ -52,14 +48,19 @@ export function BudgetSettings({
           <span className="mb-1 block text-[12px] text-cream-dim">
             כמה אנשים אוכלים
           </span>
+          {/* Empty means "count the roster". A number here is the Lead saying
+              they know something the roster does not (Bible §23). */}
           <ToolInput
             type="number"
             name="expectedDiners"
             min={1}
-            defaultValue={diners}
+            placeholder={String(diners)}
+            defaultValue={dinersOverride ?? ""}
           />
           <span className="mt-1 block text-[11.5px] text-cream-dim">
-            זה גם המספר שמכפיל את כל המתכונים.
+            {dinersOverride === null
+              ? `ריק = לפי הנרשמים. כרגע ${diners}.`
+              : `ידני. לפי הנרשמים היו ${diners} — נקו את השדה כדי לחזור לזה.`}
           </span>
         </label>
         <label className="block">

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getBudget, getShoppingList } from "@/lib/data/shopping";
-import { getSettings } from "@/lib/data/camp";
+import { getSettings, defaultDiners } from "@/lib/data/camp";
 import { BudgetSettings, ReviewButton } from "./BudgetForms";
 import { HqHeading, Metric, Table, Th, Td, Tr } from "@/components/hq/primitives";
 import { Panel } from "@/components/shmifting/surfaces";
@@ -22,10 +22,11 @@ export const metadata = { title: "תקציב — Kitchen HQ" };
    ========================================================================= */
 
 export default async function BudgetPage() {
-  const [budget, list, camp] = await Promise.all([
+  const [budget, list, camp, diners] = await Promise.all([
     getBudget(),
     getShoppingList(),
     getSettings(),
+    defaultDiners(),
   ]);
 
   const locked = Boolean(camp.lockedAt);
@@ -274,7 +275,8 @@ export default async function BudgetPage() {
         <div className="p-4">
           <BudgetSettings
             perPerson={camp.budgetPerPerson}
-            diners={camp.expectedDiners}
+            diners={diners}
+            dinersOverride={camp.expectedDiners}
             currency={camp.currency}
             locked={locked}
           />

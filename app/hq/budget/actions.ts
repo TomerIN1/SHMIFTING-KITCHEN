@@ -24,20 +24,22 @@ export async function updateBudget(
   await assertAdmin();
 
   const perPerson = Number(formData.get("budgetPerPerson") ?? 0);
-  const diners = Number(formData.get("expectedDiners") ?? 0);
+  /* Blank = derive from the roster. */
+  const dinersRaw = String(formData.get("expectedDiners") ?? "").trim();
+  const diners = dinersRaw === "" ? null : Number(dinersRaw);
 
   if (!Number.isFinite(perPerson) || perPerson < 0) {
     return { error: "תקציב לאדם לא תקין" };
   }
-  if (!Number.isFinite(diners) || diners < 1) {
-    return { error: "צריך לפחות סועד אחד" };
+  if (diners !== null && (!Number.isFinite(diners) || diners < 1)) {
+    return { error: "צריך לפחות סועד אחד, או להשאיר ריק לפי הנרשמים" };
   }
 
   await db
     .update(settings)
     .set({
       budgetPerPerson: perPerson,
-      expectedDiners: Math.round(diners),
+      expectedDiners: diners === null ? null : Math.round(diners),
       currency: String(formData.get("currency") ?? "₪").slice(0, 3),
       updatedAt: new Date(),
     })

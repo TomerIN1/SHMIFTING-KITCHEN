@@ -4,7 +4,7 @@ import { HqSidebar, HqTabs } from "@/components/hq/HqNav";
 import { WordmarkLink } from "@/components/shmifting/Wordmark";
 import { UserBadge } from "@/components/shmifting/UserBadge";
 import { Glyph } from "@/components/shmifting/Glyph";
-import { getSettings, getBreakdown } from "@/lib/data/camp";
+import { getSettings, getBreakdown, defaultDiners } from "@/lib/data/camp";
 import { getMenuStats } from "@/lib/data/menu";
 import { getShiftStats } from "@/lib/data/shifts";
 import { getShoppingList } from "@/lib/data/shopping";
@@ -27,8 +27,9 @@ export const metadata = { title: "Kitchen HQ — SHMIFTING" };
 export default async function HqLayout({ children }: LayoutProps<"/hq">) {
   const user = await requireAdmin();
 
-  const [camp, people, menu, shifts, shopping, readiness] = await Promise.all([
+  const [camp, diners, people, menu, shifts, shopping, readiness] = await Promise.all([
     getSettings(),
+    defaultDiners(),
     getBreakdown(),
     getMenuStats(),
     getShiftStats(),
@@ -75,7 +76,7 @@ export default async function HqLayout({ children }: LayoutProps<"/hq">) {
               <div className="flex items-baseline gap-1.5">
                 <dt className="text-cream-dim">סועדים</dt>
                 <dd className="font-bold tabular-nums text-cream" dir="ltr">
-                  {camp.expectedDiners}
+                  {diners}
                 </dd>
               </div>
               <Link

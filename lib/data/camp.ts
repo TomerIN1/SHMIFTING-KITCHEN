@@ -97,8 +97,20 @@ export const getUserWithProfile = cache(async (userId: string) => {
   });
 });
 
-/** How many people a meal should be cooked for, when the meal doesn't say. */
-export async function defaultDiners(): Promise<number> {
+/** How many people a meal should be cooked for, when the meal doesn't say.
+ *
+ *  Derived from the roster by default: whoever has joined and has not dropped
+ *  out is who we are cooking for. Two people registered means we cook for two.
+ *  Nobody should have to keep a head count in sync by hand when the product
+ *  already knows it (Bible §22), and a stale number here silently multiplies
+ *  every recipe quantity, every shopping line and the whole budget.
+ *
+ *  `settings.expectedDiners` overrides it when set, because the Lead
+ *  legitimately knows things the roster does not — six friends arriving who
+ *  never signed up (Bible §23).
+ */
+export const defaultDiners = cache(async (): Promise<number> => {
   const camp = await getSettings();
-  return camp.expectedDiners;
-}
+  if (camp.expectedDiners !== null) return camp.expectedDiners;
+  return (await getDiners()).length;
+});

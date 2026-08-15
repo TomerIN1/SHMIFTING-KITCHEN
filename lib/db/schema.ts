@@ -154,7 +154,13 @@ export const settings = sqliteTable("settings", {
   departureDate: integer("departure_date", { mode: "timestamp" }).notNull(),
   festivalStart: integer("festival_start", { mode: "timestamp" }).notNull(),
   festivalEnd: integer("festival_end", { mode: "timestamp" }).notNull(),
-  expectedDiners: integer("expected_diners").notNull().default(46),
+  /* NULL means "however many people have joined the camp" — the roster is the
+     head count, and it is already the truth (Bible §22: do the boring
+     calculation). A number here is the Kitchen Lead overriding that, which
+     they will want when people are coming who have not registered yet
+     (Bible §23). Same nullable-override shape as meals.expectedDiners.
+     Read it through defaultDiners(), never directly. */
+  expectedDiners: integer("expected_diners"),
   budgetPerPerson: real("budget_per_person").notNull().default(0),
   currency: text("currency").notNull().default("₪"),
   /* Shift selection has its own gate — Bible §38. */

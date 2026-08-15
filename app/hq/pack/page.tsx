@@ -1,4 +1,4 @@
-import { getSettings, getActivePeople, getBreakdown } from "@/lib/data/camp";
+import { getSettings, getActivePeople, getBreakdown, defaultDiners } from "@/lib/data/camp";
 import { getMenu, groupByDay } from "@/lib/data/menu";
 import { getShifts } from "@/lib/data/shifts";
 import { getRecipes } from "@/lib/data/recipes";
@@ -46,9 +46,10 @@ export const metadata = { title: "חבילת המטבח — Kitchen HQ" };
    ========================================================================= */
 
 export default async function PackPage() {
-  const [camp, people, breakdown, menu, shifts, recipes, shopping, budget, readiness] =
+  const [camp, diners, people, breakdown, menu, shifts, recipes, shopping, budget, readiness] =
     await Promise.all([
       getSettings(),
+      defaultDiners(),
       getActivePeople(),
       getBreakdown(),
       getMenu(),
@@ -129,7 +130,7 @@ export default async function PackPage() {
           <p className="mt-4 text-sm text-ink/60">
             {hebrewFullDate(camp.festivalStart)} – {hebrewFullDate(camp.festivalEnd)}
             {" · "}
-            {camp.expectedDiners} סועדים
+            {diners} סועדים
           </p>
           {camp.lockedAt && (
             <p className="mt-2 text-[13px] font-semibold text-ink">

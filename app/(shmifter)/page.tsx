@@ -84,6 +84,9 @@ export default async function HomePage() {
       {/* ---- THE ONE THING TO DO NOW ------------------------------------ */}
       <NextAction progress={progress} campLocked={Boolean(camp.lockedAt)} />
 
+      {/* ---- WHY ANY OF THIS ---------------------------------------------- */}
+      <HowThisWorks />
+
       {/* ---- THE TRAIL --------------------------------------------------- */}
       <section aria-labelledby="trail-heading">
         <h2
@@ -162,6 +165,59 @@ export default async function HomePage() {
         </p>
       </footer>
     </div>
+  );
+}
+
+/* Three lines, because a member should not have to guess why a kitchen app is
+   asking them about chickpeas. Bible §9 wants the Home to answer where are we,
+   what have I done, what should I do — this answers the question underneath
+   all three: what is this, and what happens to what I type. Kept to one
+   sentence each; the moment it needs a fourth it has become a manual. */
+function HowThisWorks() {
+  const beats = [
+    {
+      k: "למה",
+      accent: "text-shmift-pink",
+      text: "כי אף אחד לא רוצה להיות זה ששואל ״מה אוכלים?״ ביום השלישי באבק.",
+    },
+    {
+      k: "איך",
+      accent: "text-sun",
+      text: "אתם מספרים לנו מה אתם אוכלים, מצביעים למה שבא לכם, ותופסים ערב אחד במטבח.",
+    },
+    {
+      k: "מה",
+      accent: "text-lavender",
+      text: "אנחנו הופכים את זה לתפריט, לרשימת קניות ולמשמרות — ואז מכבים את הטלפונים.",
+    },
+  ];
+
+  return (
+    <section
+      aria-label="איך זה עובד"
+      className="rounded-[18px_22px_16px_20px] border-2 border-charcoal-5 bg-charcoal-2 px-5 py-5 sm:px-6"
+    >
+      <ul className="space-y-3.5">
+        {beats.map((beat) => (
+          <li key={beat.k} className="flex items-baseline gap-3">
+            <span
+              className={cn(
+                "w-9 shrink-0 font-display text-[15px] leading-none",
+                beat.accent,
+              )}
+            >
+              {beat.k}
+            </span>
+            <span className="text-sm leading-relaxed text-cream-2 sm:text-[15px]">
+              {beat.text}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 border-t border-charcoal-5 pt-3 text-[13px] leading-relaxed text-cream-dim">
+        שתי דקות עכשיו. שבוע של אוכל טוב אחר כך. עסקה סבירה.
+      </p>
+    </section>
   );
 }
 

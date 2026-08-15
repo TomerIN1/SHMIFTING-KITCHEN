@@ -102,11 +102,11 @@ export default async function PeoplePage() {
         lead={`${people.length} אנשים מגיעים. זה מי שאתם מאכילים.`}
       />
 
-      {/* Bible §24: the head count that multiplies every recipe is a separate
-          manual number. When it drifts from who is actually coming, say so —
-          do not silently "fix" it, because the Lead may have set it high on
-          purpose (Bible §23). */}
-      {camp.expectedDiners !== people.length && (
+      {/* The head count follows the roster on its own now, so there is nothing
+          to warn about unless the Lead has deliberately overridden it. When
+          they have, say so plainly and show both numbers — an override is a
+          decision worth seeing, not a drift worth "fixing" (Bible §23, §24). */}
+      {camp.expectedDiners !== null && camp.expectedDiners !== people.length && (
         <div className="rounded-md border-2 border-attention/50 border-s-[6px] border-s-attention bg-attention/[0.07] p-3.5">
           <p className="flex items-center gap-2 font-display text-[15px] text-attention">
             <Glyph name="alert" strokeWidth={2.4} />

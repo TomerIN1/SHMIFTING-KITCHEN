@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMenu } from "@/lib/data/menu";
-import { getSettings } from "@/lib/data/camp";
+import { getSettings, defaultDiners } from "@/lib/data/camp";
 import { HqHeading } from "@/components/hq/primitives";
 import { Panel } from "@/components/shmifting/surfaces";
 import { Glyph } from "@/components/shmifting/Glyph";
@@ -26,7 +26,11 @@ import { hebrewFullDate } from "@/lib/utils";
 
 export default async function MealPage({ params }: PageProps<"/hq/menu/[id]">) {
   const { id } = await params;
-  const [menu, camp] = await Promise.all([getMenu(), getSettings()]);
+  const [menu, camp, diners] = await Promise.all([
+    getMenu(),
+    getSettings(),
+    defaultDiners(),
+  ]);
   const meal = menu.find((m) => m.id === id);
   if (!meal) notFound();
 
@@ -113,7 +117,7 @@ export default async function MealPage({ params }: PageProps<"/hq/menu/[id]">) {
               expectedDiners: meal.expectedDiners,
               overrideReason: meal.overrideReason,
             }}
-            campDiners={camp.expectedDiners}
+            campDiners={diners}
             locked={locked}
           />
         </div>
