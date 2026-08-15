@@ -202,6 +202,29 @@ it; a camp built on other people's generosity says so anyway.
 
 The **wordmark is not typeset** — it is cut out of Golden Reference 02 by `scripts/extract-wordmark.py`, because no webfont reproduces the drips and riso grain.
 
+Two regions come out of that script, and they are cut differently on purpose.
+The **wordmark** is keyed on luminance alone, because it is pink-to-lavender by
+design and colour is the last thing that may be stripped from it. The **tagline**
+(`GIFT OR SHMIFT?`) is additionally filtered to cream *components*: it arcs
+through a crowd of decoration — a heart, a sun, stars, drips — that interleaves
+with the glyphs' bounding boxes, so no rectangle can separate them. Grouping the
+ink into connected blobs and judging each on its mean saturation leaves the
+letters bit-for-bit untouched, which a per-pixel colour key does not: that eats
+their warm grain and turns them grey.
+
+Two thresholds in there are load-bearing and were measured, not guessed. Small
+blobs must be *convincingly* cream (mean saturation < 55) while large ones need
+only be roughly so (< 80) — that is what keeps the **dot of the question mark**
+(30 px, saturation 40) while dropping the decorative mauve dot below the T
+(52 px, saturation 67). And one orange leaf-tip physically touches the F, so it
+joins that letter's component and survives every colour rule; it is the single
+hard-coded `ERASE` rectangle, placed in the empty row between the leaf (ends
+y=20) and the letters (start y=22).
+
+`extract()` warns when ink still touches a crop edge, which is how the original
+bug would have been caught: the tagline box was 48 px tall against ink spanning
+59 px, so every glyph was sheared along the bottom.
+
 ---
 
 ## 6. WHAT IS COMPLETE
