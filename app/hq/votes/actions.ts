@@ -162,6 +162,12 @@ function optionDate(formData: FormData): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+
+function optionDietary(formData: FormData): "omnivore" | "vegetarian" | "vegan" {
+  const raw = String(formData.get("dietary") ?? "omnivore");
+  return raw === "vegan" || raw === "vegetarian" ? raw : "omnivore";
+}
+
 export async function addOption(
   _prev: VoteAdminState,
   formData: FormData,
@@ -187,6 +193,7 @@ export async function addOption(
     dishes: String(formData.get("dishes") ?? "").trim() || null,
     dietaryNote: String(formData.get("dietaryNote") ?? "").trim() || null,
     mealDate: optionDate(formData),
+    dietary: optionDietary(formData),
     accent: palette[count % palette.length],
     sortOrder: count,
   });
@@ -208,6 +215,7 @@ export async function updateOption(formData: FormData): Promise<void> {
       dishes: String(formData.get("dishes") ?? "").trim() || null,
       dietaryNote: String(formData.get("dietaryNote") ?? "").trim() || null,
       mealDate: optionDate(formData),
+      dietary: optionDietary(formData),
     })
     .where(eq(voteOptions.id, id));
 

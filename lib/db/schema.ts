@@ -213,6 +213,12 @@ export const voteOptions = sqliteTable(
        time these are still concepts, not yet operational dish records. */
     dishes: text("dishes"),
     dietaryNote: text("dietary_note"),
+    /* Structured, not just prose, so "does every night have a vegan main?"
+       is a question the product can answer instead of one somebody has to
+       re-read the notes to check (Bible §17, §22). */
+    dietary: text("dietary", { enum: ["omnivore", "vegetarian", "vegan"] })
+      .notNull()
+      .default("omnivore"),
     /* Which evening this one would be, when the Lead has decided. The round's
        own mealDate used to set the date for every option in it, which only
        works when a round IS one night. It is not: a round is a menu of

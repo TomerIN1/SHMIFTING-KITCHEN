@@ -30,6 +30,7 @@ export interface VoteOptionView {
   description: string | null;
   dishes: string | null;
   dietaryNote: string | null;
+  dietary?: string;
   accent: string;
   suggester?: { name: string } | null;
 }
@@ -212,9 +213,16 @@ function ConceptCard({
             accent.bg,
           )}
         >
-          <h3 className="font-display text-xl leading-tight text-ink">
-            {option.title}
-          </h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-display text-xl leading-tight text-ink">
+              {option.title}
+            </h3>
+            {(option.dietary === "vegan" || option.dietary === "vegetarian") && (
+              <span className="mt-0.5 shrink-0 rounded-full border-2 border-ink bg-good px-2 py-0.5 text-[11px] font-medium text-ink">
+                {option.dietary === "vegan" ? "טבעוני" : "צמחוני"}
+              </span>
+            )}
+          </div>
           {option.dietaryNote && (
             <p className="mt-0.5 text-[12.5px] text-ink/70">
               {option.dietaryNote}

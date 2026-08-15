@@ -1,181 +1,191 @@
 /* Must be first: it loads .env.local before ../lib/db reads the connection. */
 import "./load-env";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "../lib/db";
 import { voteRounds, voteOptions } from "../lib/db/schema";
 import { newId } from "../lib/utils";
 
 /* ============================================================================
-   THE CUISINE LIBRARY
+   THE CUISINE NIGHTS
 
-   Each evening of the burn is one cuisine, chosen rather than improvised. This
-   builds the menu the camp votes from: one main course per idea, each with a
-   note on what comes alongside it, because the vote is on the centrepiece and
-   the Kitchen Lead fills in the rest.
+   Each evening of the burn is one cuisine, and the cuisine is a decision, not
+   a vote — the Kitchen Lead sets it. What the camp votes on is the main course
+   INSIDE that evening: six candidates per night, and the flames pick one.
 
-   Written for THIS camp, not for a restaurant:
+   So this builds one round per cuisine, each holding:
 
-   · Israeli comfort first. The camp asked to feel at home in the middle of the
-     desert, so schnitzel is on the board and so is the food people actually
-     grew up eating.
-   · Cookable on gas burners in dust. One-pot stews, grills, and things that
-     hold. Nothing that needs an oven at scale or a fryer running for an hour —
-     except the schnitzel night, which is worth the trouble precisely because
-     it is trouble.
-   · Every idea carries a vegan or vegetarian route in the same pot where it
-     can. Bible §17: dietary needs are designed for, not bolted on afterwards
-     as a sad plate to one side.
+     · four mains, the ones people actually picture when they hear the cuisine
+     · two vegan mains that are dishes in their own right
 
-   Deliberately created as `upcoming`, not `open`. This is a draft for the
-   Kitchen Lead to cut, rename and re-price before the camp sees it — the Lead
-   owns the menu (Bible §23).
+   That second point is the one worth defending. The vegan options here are not
+   the same plate with the meat left off — falafel, dal, charred aubergine and
+   black bean tacos are what a third of the camp would order anyway. Bible §17
+   asks for dietary needs to be designed for rather than accommodated, and a
+   vegan who wins the vote outright is the proof it worked.
+
+   One flame per round. The ask was "select one out of a few", so voting is six
+   quick taps rather than a budgeting exercise.
+
+   Every round is created `upcoming`. The Lead sets the dates, cuts what the
+   camp is not doing, and opens the ones they want (Bible §23).
 
      npx tsx scripts/seed-cuisines.ts            (adds only what is missing)
-     npx tsx scripts/seed-cuisines.ts --reset    (wipes the round and rebuilds)
+     npx tsx scripts/seed-cuisines.ts --reset    (rebuilds them all)
    ========================================================================= */
 
-const ROUND_TITLE = "ערב לכל טעם";
+type Diet = "omnivore" | "vegetarian" | "vegan";
 
-const IDEAS: {
+interface Night {
   title: string;
-  description: string;
-  dishes: string;
-  dietaryNote: string;
-}[] = [
+  subtitle: string;
+  mains: { title: string; note: string; dietary: Diet }[];
+}
+
+const NIGHTS: Night[] = [
   {
-    title: "ליל השניצל",
-    description:
-      "הערב שכולם מחכים לו בלי להודות. פירורים, מחבת, ותור שנוצר מעצמו.",
-    dishes:
-      "שניצלים מטוגנים במקום · פירה חמאתי · סלט ישראלי קצוץ דק · לימון",
-    dietaryNote: "גרסת כרובית וסלרי לטבעונים, מאותה מחבת",
+    title: "הערב הישראלי",
+    subtitle: "הערב שבו המדבר מרגיש כמו המטבח של אמא. מה עושים?",
+    mains: [
+      { title: "שניצלים", note: "מטוגנים במקום · פירה · סלט קצוץ דק · לימון", dietary: "omnivore" },
+      { title: "קוסקוס עם ירקות ובשר", note: "סיר אחד גדול · מרק ירקות · חריף בצד", dietary: "omnivore" },
+      { title: "מעורב ירושלמי", note: "בפיתות · בצל · טחינה · חמוצים", dietary: "omnivore" },
+      { title: "סביח", note: "חצילים מטוגנים · ביצה קשה · עמבה · סלט", dietary: "vegetarian" },
+      { title: "פלאפל", note: "מטוגן במקום · פיתות · חמישה סלטים · טחינה", dietary: "vegan" },
+      { title: "חומוס חם עם גרגרים", note: "מסולת · פול · שמן זית · פיתות חמות", dietary: "vegan" },
+    ],
   },
   {
     title: "ליל הודו",
-    description: "סיר אחד גדול שמריח על כל הקמפ שלוש שעות לפני שאוכלים.",
-    dishes: "קארי חומוס ובטטה בקוקוס · אורז בסמטי · יוגורט ומלפפון · צ׳אפטי",
-    dietaryNote: "טבעוני במקור — היוגורט בצד",
+    subtitle: "סיר אחד שמריח על כל הקמפ שלוש שעות לפני שאוכלים.",
+    mains: [
+      { title: "בטר צ׳יקן", note: "אורז בסמטי · יוגורט ומלפפון · נאן", dietary: "omnivore" },
+      { title: "ביריאני עוף", note: "אורז מתובל בסיר אחד · רייתה · חמוצים", dietary: "omnivore" },
+      { title: "קימה מטר", note: "בשר טחון ואפונה · אורז · צ׳אפטי", dietary: "omnivore" },
+      { title: "פאלאק פאניר", note: "תרד וגבינה · אורז בסמטי · נאן", dietary: "vegetarian" },
+      { title: "דאל טאדקה", note: "עדשים בכמון וכוסברה · אורז · לימון כבוש", dietary: "vegan" },
+      { title: "צ׳אנה מסאלה", note: "חומוס ברוטב עגבניות · אורז · צ׳אפטי", dietary: "vegan" },
+    ],
   },
   {
     title: "על האש",
-    description: "הדבר הכי ישראלי שיש. מנגל, עשן, וכולם עומדים מסביב.",
-    dishes: "פרגיות ולבבות בשיפודים · חצילים שרופים · פיתות · חמוצים וטחינה",
-    dietaryNote: "שיפודי פטריות וטופו על אותה רשת",
+    subtitle: "מנגל, עשן, וכולם עומדים מסביב. הכי ישראלי שיש.",
+    mains: [
+      { title: "פרגיות בשיפודים", note: "פיתות · טחינה · חמוצים · בצל סגול", dietary: "omnivore" },
+      { title: "קבב", note: "על הרשת · לאפות · סלט ערבי · עמבה", dietary: "omnivore" },
+      { title: "אנטריקוט", note: "נתחים על הגחלים · צ׳ימיצ׳ורי · תפוחי אדמה", dietary: "omnivore" },
+      { title: "כנפיים בדבש", note: "צרובות · סלט כרוב · לחם שום", dietary: "omnivore" },
+      { title: "חצילים שלמים על הגחלים", note: "טחינה · רימונים · לאפות", dietary: "vegan" },
+      { title: "שיפודי טופו וירקות", note: "מרינדה חריפה · אורז · בוטנים", dietary: "vegan" },
+    ],
   },
   {
     title: "ערב מקסיקני",
-    description: "כל אחד בונה לעצמו. הכי מהיר להאכיל בו ארבעים איש.",
-    dishes: "טאקוס עם שעועית שחורה ובשר טחון · טורטיות · גוואקמולי · סלסה חריפה",
-    dietaryNote: "השעועית היא המנה, לא התחליף",
+    subtitle: "כל אחד בונה לעצמו. הכי מהיר להאכיל בו את כל הקמפ.",
+    mains: [
+      { title: "טאקוס בשר טחון", note: "טורטיות · גוואקמולי · סלסה · לימון", dietary: "omnivore" },
+      { title: "בוריטו עוף", note: "אורז · שעועית · גבינה · סלסה ורדה", dietary: "omnivore" },
+      { title: "פחיטס בקר", note: "פלפלים ובצל על הפלנצ׳ה · טורטיות", dietary: "omnivore" },
+      { title: "אנצ׳ילדס גבינה", note: "ברוטב עגבניות · שמנת חמוצה · כוסברה", dietary: "vegetarian" },
+      { title: "טאקוס שעועית שחורה ובטטה", note: "בטטה צרובה · גוואקמולי · סלסה", dietary: "vegan" },
+      { title: "צ׳ילי סין קרנה", note: "שעועית בסיר אחד · אורז · טורטיה צלויה", dietary: "vegan" },
+    ],
   },
   {
     title: "ערב אמריקאי",
-    description: "בורגרים, ורוטב שנוזל על הידיים. בלי להתנצל.",
-    dishes: "המבורגרים על הפלנצ׳ה · לחמניות · בצל מקורמל · צ׳יפס בתנור",
-    dietaryNote: "קציצות עדשים ופטריות בגריל",
+    subtitle: "בורגרים, ורוטב שנוזל על הידיים. בלי להתנצל.",
+    mains: [
+      { title: "המבורגר בקר", note: "על הפלנצ׳ה · לחמניות · בצל מקורמל · צ׳יפס", dietary: "omnivore" },
+      { title: "פולד ביף", note: "מתפרק אחרי שעות · קולסלו · לחמניות", dietary: "omnivore" },
+      { title: "כנפיים באפלו", note: "חריף · סלרי · רוטב לבן", dietary: "omnivore" },
+      { title: "מק אנד צ׳יז", note: "בסיר ענק · פירורים קראנצ׳יים · סלט ירוק", dietary: "vegetarian" },
+      { title: "בורגר עדשים וסלק", note: "לחמניות · חמוצים · טחינה חריפה · צ׳יפס", dietary: "vegan" },
+      { title: "צ׳ילי שעועית", note: "מתבשל לאט · אורז · בצל ולימון", dietary: "vegan" },
+    ],
   },
   {
     title: "ערב תאילנדי",
-    description: "חריף, חמצמץ, ומרענן בדיוק כשכבר נמאס לכם מאבק.",
-    dishes: "קארי ירוק בקוקוס · אטריות אורז · בוטנים ולימון · סלט כרוב חריף",
-    dietaryNote: "טבעוני לגמרי, בלי רוטב דגים",
-  },
-  {
-    title: "ערב איטלקי",
-    description: "פסטה לארבעים איש. הדבר הכי מנחם שאפשר לעשות בסיר אחד.",
-    dishes: "פסטה ברוטב עגבניות ובזיליקום · פרמזן · לחם שום · סלט ירוק",
-    dietaryNote: "הרוטב טבעוני, הגבינה בצד",
-  },
-  {
-    title: "ערב מרוקאי",
-    description: "טאג׳ין שמתבשל לאט בזמן שהשמש יורדת. ריח שעוצר אנשים.",
-    dishes: "טאג׳ין ירקות ושזיפים · קוסקוס · מרק חריימה · סלטים כבושים",
-    dietaryNote: "הטאג׳ין טבעוני, החריימה בצד",
-  },
-  {
-    title: "ליל הבלקן",
-    description: "בשרים, גריל ולחם. אוכל של אנשים שעבדו כל היום.",
-    dishes: "קבב וקובידה · אורז עם שקדים · סלט צ׳ופסקה · יוגורט ושום",
-    dietaryNote: "קבב עדשים ואגוזים על הגריל",
-  },
-  {
-    title: "ערב אסייתי",
-    description: "ווק, אש גדולה, וכולם אוכלים מקערה. הכי מהיר אחרי יום ארוך.",
-    dishes: "אטריות מוקפצות בווק · טופו וירקות · אורז דביק · אצות ושומשום",
-    dietaryNote: "טבעוני כברירת מחדל",
-  },
-  {
-    title: "ערב יווני",
-    description: "לימון, אורגנו וים תיכון. קליל בדיוק כשצריך משהו קליל.",
-    dishes: "סובלאקי עוף בלימון · פיתות · צזיקי · סלט יווני עם פטה",
-    dietaryNote: "סובלאקי חלומי לצמחונים, פטריות לטבעונים",
-  },
-  {
-    title: "ערב חומוס",
-    description: "ארוחה שלמה בלי בישול אמיתי. מושלמת ליום שכולם מותשים.",
-    dishes: "חומוס חם עם גרגרים · פול · ביצים קשות · פיתות · סלט ערבי",
-    dietaryNote: "טבעוני כמעט לגמרי — הביצה בצד",
+    subtitle: "חריף, חמצמץ ומרענן — בדיוק כשנמאס מהאבק.",
+    mains: [
+      { title: "קארי אדום עם עוף", note: "קוקוס · אורז יסמין · בזיליקום תאילנדי", dietary: "omnivore" },
+      { title: "פאד תאי עוף", note: "אטריות אורז · בוטנים · לימון · נבטים", dietary: "omnivore" },
+      { title: "פאד קרפאו", note: "בשר טחון ובזיליקום חריף · אורז · ביצת עין", dietary: "omnivore" },
+      { title: "קארי מסאמן", note: "בקר מתפרק · תפוחי אדמה · בוטנים · אורז", dietary: "omnivore" },
+      { title: "קארי ירוק ירקות וטופו", note: "קוקוס · חצילים · אורז יסמין", dietary: "vegan" },
+      { title: "פאד תאי טופו", note: "בלי רוטב דגים · בוטנים · לימון · צ׳ילי", dietary: "vegan" },
+    ],
   },
 ];
 
 async function main() {
   const reset = process.argv.includes("--reset");
+  const titles = NIGHTS.map((n) => n.title);
 
-  let round = await db.query.voteRounds.findFirst({
-    where: eq(voteRounds.title, ROUND_TITLE),
-    with: { options: true },
+  /* The first draft modelled a round as "which cuisine?", which is not what
+     this camp is doing — the cuisine is the Lead's call. Clear it out. */
+  const stale = await db.query.voteRounds.findMany({
+    where: eq(voteRounds.title, "ערב לכל טעם"),
   });
-
-  if (round && reset) {
-    await db.delete(voteRounds).where(eq(voteRounds.id, round.id));
-    console.log("removed the previous draft round");
-    round = undefined;
+  if (stale.length) {
+    await db.delete(voteRounds).where(eq(voteRounds.title, "ערב לכל טעם"));
+    console.log("removed the earlier one-round draft (wrong model)");
   }
 
-  if (!round) {
+  if (reset) {
+    const existing = await db.query.voteRounds.findMany({
+      where: inArray(voteRounds.title, titles),
+    });
+    if (existing.length) {
+      await db.delete(voteRounds).where(inArray(voteRounds.title, titles));
+      console.log(`--reset: removed ${existing.length} cuisine rounds`);
+    }
+  }
+
+  const palette = ["sun", "terracotta", "pink", "lavender", "dust-blue", "peach"];
+  let rounds = 0;
+  let mains = 0;
+
+  for (const night of NIGHTS) {
+    const already = await db.query.voteRounds.findFirst({
+      where: eq(voteRounds.title, night.title),
+    });
+    if (already) {
+      console.log(`· ${night.title} — already there, skipping`);
+      continue;
+    }
+
     const roundId = newId();
     await db.insert(voteRounds).values({
       id: roundId,
-      title: ROUND_TITLE,
-      subtitle: "כל ערב בבורן הוא מטבח אחר. תנו אש למה שאתם רוצים לאכול.",
-      /* No mealDate on the round: each idea carries its own evening, because
-         a round here is a menu of nights, not one night. */
+      title: night.title,
+      subtitle: night.subtitle,
       mealType: "dinner",
-      tokensPerVoter: 5,
+      /* One flame: pick the main you want. */
+      tokensPerVoter: 1,
       status: "upcoming",
     });
-    round = await db.query.voteRounds.findFirst({
-      where: eq(voteRounds.id, roundId),
-      with: { options: true },
-    });
-    console.log(`created round "${ROUND_TITLE}" (upcoming — open it from HQ)`);
+    rounds++;
+
+    for (const [i, main] of night.mains.entries()) {
+      await db.insert(voteOptions).values({
+        id: newId(),
+        roundId,
+        title: main.title,
+        dishes: main.note,
+        dietary: main.dietary,
+        accent: palette[i % palette.length],
+        sortOrder: i,
+      });
+      mains++;
+    }
+
+    const vegan = night.mains.filter((m) => m.dietary === "vegan").length;
+    console.log(
+      `✓ ${night.title} — ${night.mains.length} mains (${vegan} vegan)`,
+    );
   }
 
-  if (!round) throw new Error("round missing after creation");
-
-  const palette = ["sun", "terracotta", "pink", "lavender", "dust-blue", "peach"];
-  const existing = new Set(round.options.map((o) => o.title));
-  let added = 0;
-
-  for (const idea of IDEAS) {
-    if (existing.has(idea.title)) continue;
-    await db.insert(voteOptions).values({
-      id: newId(),
-      roundId: round.id,
-      title: idea.title,
-      description: idea.description,
-      dishes: idea.dishes,
-      dietaryNote: idea.dietaryNote,
-      accent: palette[(round.options.length + added) % palette.length],
-      sortOrder: round.options.length + added,
-    });
-    added++;
-  }
-
-  console.log(
-    `${added} ideas added · ${round.options.length + added} on the board`,
-  );
-  console.log("open it for voting from HQ → הצבעות when the list looks right.");
+  console.log(`\n${rounds} nights · ${mains} mains, all upcoming.`);
+  console.log("HQ → הצבעות: set the date on each night, then open it.");
 }
 
 main().catch((error) => {

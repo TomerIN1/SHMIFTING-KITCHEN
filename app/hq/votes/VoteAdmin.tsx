@@ -246,6 +246,7 @@ export function OptionEditor({
     description: string | null;
     dishes: string | null;
     dietaryNote: string | null;
+    dietary: string;
     mealDate: Date | null;
     flames: number;
     share: number;
@@ -314,6 +315,16 @@ export function OptionEditor({
               </label>
               <label className="block">
                 <span className="mb-1 block text-[12px] text-cream-dim">
+                  תזונה
+                </span>
+                <ToolSelect name="dietary" defaultValue="omnivore">
+                  <option value="omnivore">רגיל</option>
+                  <option value="vegetarian">צמחוני</option>
+                  <option value="vegan">טבעוני</option>
+                </ToolSelect>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[12px] text-cream-dim">
                   באיזה ערב
                 </span>
                 <ToolInput type="date" name="mealDate" />
@@ -355,6 +366,7 @@ function OptionRow({
     description: string | null;
     dishes: string | null;
     dietaryNote: string | null;
+    dietary: string;
     mealDate: Date | null;
     flames: number;
     share: number;
@@ -389,7 +401,15 @@ function OptionRow({
             defaultValue={option.dietaryNote ?? ""}
             maxLength={120}
           />
-          <label className="block sm:col-span-2">
+          <label className="block">
+            <span className="mb-1 block text-[12px] text-cream-dim">תזונה</span>
+            <ToolSelect name="dietary" defaultValue={option.dietary ?? "omnivore"}>
+              <option value="omnivore">רגיל</option>
+              <option value="vegetarian">צמחוני</option>
+              <option value="vegan">טבעוני</option>
+            </ToolSelect>
+          </label>
+          <label className="block">
             <span className="mb-1 block text-[12px] text-cream-dim">
               באיזה ערב מבשלים את זה
             </span>
