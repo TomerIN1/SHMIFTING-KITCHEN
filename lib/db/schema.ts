@@ -192,6 +192,11 @@ export const voteRounds = sqliteTable("vote_rounds", {
     .default("dinner"),
   /* Bible §13 — the flame count is configurable, never hard-coded. */
   tokensPerVoter: integer("tokens_per_voter").notNull().default(3),
+  /* Most flames a single option may receive from one person. NULL = stack as
+     many as you like. Set to 1 and the round stops being a budget to allocate
+     and becomes a straight "pick these" — give a member as many flames as the
+     camp has evenings and the tally IS the menu, with nothing to interpret. */
+  maxPerOption: integer("max_per_option"),
   status: text("status", { enum: ["upcoming", "open", "closed"] })
     .notNull()
     .default("upcoming"),

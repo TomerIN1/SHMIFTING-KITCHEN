@@ -67,6 +67,16 @@ export async function castVote(
     return sum + flames;
   }, 0);
 
+  const cap = round.maxPerOption;
+  if (cap !== null && Object.values(allocation).some((f) => f > cap)) {
+    return {
+      error:
+        cap === 1
+          ? "להבה אחת לכל ערב — פזרו אותן על ערבים שונים"
+          : `עד ${cap} להבות לכל אפשרות`,
+    };
+  }
+
   if (total > round.tokensPerVoter) {
     return { error: `יש לכם רק ${round.tokensPerVoter} להבות` };
   }

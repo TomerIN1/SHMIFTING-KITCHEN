@@ -115,6 +115,11 @@ export function dishRoleOrder(key: string): number {
    ------------------------------------------------------------------------ */
 
 export const OPTION_TAGS = {
+  /* Distinct from `dietary`, and not a duplicate of it: dietary says what THIS
+     dish is, this says the evening HAS a vegan main among its dishes. When an
+     option is a whole night rather than one plate, that is the thing a vegan
+     needs to know before spending a flame on it. */
+  "vegan-option": { he: "יש טבעוני", tone: "good" },
   spicy: { he: "חריף", tone: "alarm" },
   gluten: { he: "מכיל גלוטן", tone: "attention" },
   "gluten-free": { he: "ללא גלוטן", tone: "good" },

@@ -42,12 +42,15 @@ const EMPTY: VoteState = {};
 export function VoteBoard({
   roundId,
   tokens,
+  maxPerOption,
   options,
   initial,
   disabled,
 }: {
   roundId: string;
   tokens: number;
+  /* 1 turns the round into "pick your evenings" — see voteRounds.maxPerOption. */
+  maxPerOption?: number | null;
   options: VoteOptionView[];
   initial: Record<string, number>;
   disabled?: boolean;
@@ -63,6 +66,11 @@ export function VoteBoard({
 
   const give = (optionId: string) => {
     if (left <= 0 || disabled) return;
+    /* Mirrors the server rule so the button simply stops rather than letting
+       somebody build an allocation that will be rejected on save. */
+    if (maxPerOption != null && (allocation[optionId] ?? 0) >= maxPerOption) {
+      return;
+    }
     setAllocation((a) => ({ ...a, [optionId]: (a[optionId] ?? 0) + 1 }));
     setDirty(true);
   };

@@ -147,6 +147,7 @@ function OpenRound({ round }: { round: MemberRound }) {
       <VoteBoard
         roundId={round.id}
         tokens={round.tokensPerVoter}
+        maxPerOption={round.maxPerOption}
         options={round.options}
         initial={round.myVotes}
       />
