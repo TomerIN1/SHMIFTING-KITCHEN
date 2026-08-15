@@ -17,18 +17,18 @@ import { Glyph } from "./Glyph";
      The camp wanted members to walk into music. Do not quietly revert it to
      silent-by-default because the Design Book says so — raise it with a human
      first. Everything else in §51 is still obeyed to the letter.
-   · OFF STAYS OFF, FOREVER. The default only applies when the member has
-     never expressed a preference. Once somebody turns the music off, that is
-     stored and honoured on every later visit, and nothing here will start
-     sound again behind their back. An unset key means "not asked yet";
-     "off" means "asked, and no".
+   · OFF LASTS THE VISIT. Switch the music off and it stays off for as long
+     as that tab is open — nothing restarts it behind your back. Come back
+     tomorrow and the camp is playing again, the way a room is. Making it
+     permanent cost one member the entire soundtrack after a single curious
+     tap, with no way to discover why.
    · NOT A MUSIC PLAYER. One button. No track names, no skip, no scrubber,
      no volume slider. You cannot tell from the interface how many tracks
      exist, which is the point.
    · NOTHING IS EVER GATED BEHIND IT. No task, state or warning is carried by
      sound. Turn it off and the product is unchanged.
 
-   The preference lives in localStorage — a per-device comfort setting, not
+   The preference lives in sessionStorage — a per-visit comfort setting, not
    camp data, so it does not belong in the database.
 
    The tracks come from mixkit.co, which gives music away for free. They are
@@ -83,6 +83,16 @@ const LEVEL = 0.34;
 const FADE_IN_MS = 2600;
 const FADE_OUT_MS = 1100;
 
+/* Silence lasts for the visit, not forever.
+
+   It used to be localStorage, and that turned one curious tap into permanent
+   silence on that device — the member never learns why the camp went quiet,
+   and the music is the part of this product people remember. Ambient sound in
+   a room does not work that way: you can ask for quiet, and the next time you
+   walk in the room is playing again.
+
+   §51 is still satisfied. The user controls sound, silence is always valid,
+   and nothing is gated behind audio. What changed is how long "no" lasts. */
 const STORAGE_KEY = "shmifting:sound";
 
 /* Where the music had got to, so crossing between the camp and Kitchen HQ
@@ -205,7 +215,11 @@ export function AmbientSound() {
   useEffect(() => {
     let stored: string | null = null;
     try {
-      stored = localStorage.getItem(STORAGE_KEY);
+      stored = sessionStorage.getItem(STORAGE_KEY);
+      /* Anyone who switched sound off while it was a permanent setting is
+         still silenced on that device and has no way of knowing why. Clear
+         the old key on sight so those devices recover by themselves. */
+      localStorage.removeItem(STORAGE_KEY);
     } catch {
       /* Private browsing can throw on access. Fall through to the default. */
     }
@@ -335,14 +349,14 @@ export function AmbientSound() {
       setBlocked(false);
       disarmGesture();
       try {
-        localStorage.setItem(STORAGE_KEY, "off");
+        sessionStorage.setItem(STORAGE_KEY, "off");
       } catch {}
     } else {
       wantedRef.current = true;
       disarmGesture();
       setOn(true);
       try {
-        localStorage.setItem(STORAGE_KEY, "on");
+        sessionStorage.removeItem(STORAGE_KEY);
       } catch {}
     }
   }
