@@ -129,17 +129,19 @@ export function buildMemberProgress(input: {
     {
       key: "shift",
       label: "משמרת במטבח",
+      /* Worded as an offer, not a quota. "0 מתוך 1" made a voluntary evening
+         in the kitchen read like an unpaid debt. */
       detail: !input.shiftsOpen
         ? "בחירת המשמרות עוד לא נפתחה"
-        : input.myShiftCount >= input.quota
-          ? `בחרתם ${input.myShiftCount} משמרות`
-          : input.myShiftCount === 0
-            ? "עוד לא בחרתם משמרת"
-            : `בחרתם ${input.myShiftCount} מתוך ${input.quota}`,
+        : input.myShiftCount === 0
+          ? "יש מקום בערבים, אם בא לכם"
+          : input.myShiftCount === 1
+            ? "אתם בפנים לערב אחד"
+            : `אתם בפנים ל־${input.myShiftCount} ערבים`,
       done: input.shiftsOpen && input.myShiftCount >= input.quota,
       waiting: !input.shiftsOpen,
       href: "/shifts",
-      cta: "לבחור משמרת",
+      cta: input.myShiftCount === 0 ? "להצטרף למשמרת" : "לראות את המשמרות",
     },
   ];
 

@@ -4,7 +4,6 @@ import { WordmarkLink } from "@/components/shmifting/Wordmark";
 import { UserBadge } from "@/components/shmifting/UserBadge";
 import { AmbientSound } from "@/components/shmifting/AmbientSound";
 import { getRoundsForMember } from "@/lib/data/votes";
-import { getMyShifts } from "@/lib/data/shifts";
 import { getSettings } from "@/lib/data/camp";
 
 /* ============================================================================
@@ -22,22 +21,21 @@ export default async function ShmifterLayout({
   children,
 }: LayoutProps<"/">) {
   const user = await requireUser();
-  const [rounds, myShifts, camp] = await Promise.all([
+  const [rounds, camp] = await Promise.all([
     getRoundsForMember(user.id),
-    getMyShifts(user.id),
     getSettings(),
   ]);
 
   const openUnvoted = rounds.filter(
     (r) => r.status === "open" && !r.hasVoted,
   ).length;
-  const shiftsOpen =
-    !camp.shiftsOpenAt || camp.shiftsOpenAt.getTime() <= Date.now();
-  const shiftsNeeded = Math.max(0, camp.shiftsPerPerson - myShifts.length);
-
+  /* Votes get a badge because a round closes: miss it and your say is gone,
+     which is real information. Shifts deliberately do NOT. Taking an evening
+     in the kitchen is an invitation, and a red count on the signpost turns it
+     into a debt somebody is chasing you for — the opposite of what the shifts
+     page says two clicks later (Bible §21: no badges that are not real). */
   const badges: Record<string, number> = {};
   if (openUnvoted > 0) badges["/vote"] = openUnvoted;
-  if (shiftsOpen && shiftsNeeded > 0) badges["/shifts"] = shiftsNeeded;
 
   return (
     <div className="flex min-h-full flex-col">
