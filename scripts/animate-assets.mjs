@@ -30,7 +30,21 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ASSETS = join(ROOT, "public", "assets");
 const OUT = join(ROOT, "public", "motion");
 
-const MODEL = "fal-ai/kling-video/v1/standard/image-to-video";
+/* Seedance 1.0 Pro, top quality. Two of its native parameters do work the
+   Design Book would otherwise ask a prompt to beg for:
+
+     camera_fixed    §48 wants ambient motion, never camera work. This pins
+                     the camera outright instead of hoping the model listens.
+     end_image_url   the clip is told to END on the frame it STARTED on, so
+                     the last frame meets the first and the loop closes with
+                     no visible seam. Ambient motion that jumps every five
+                     seconds is a distraction, which is the one thing §48
+                     forbids.
+
+   The Pro endpoint is required for the loop: on the Lite endpoint
+   `end_image_url` is deprecated and ignored. */
+const MODEL = "fal-ai/bytedance/seedance/v1/pro/image-to-video";
+const RESOLUTION = "1080p";
 
 /* Shared constraint. Repeated in every prompt because these models drift
    toward cinematic camera work if you let them. */
@@ -40,6 +54,8 @@ focus. The composition, the colours and the flat screen-printed illustration
 style stay exactly as they are in the source frame. Nothing new enters the
 frame. Nothing leaves. No morphing, no shape changes, no text.
 Only very slow, gentle, ambient motion within the existing artwork.
+The motion is a loop: the final frame must match the opening frame exactly,
+so the clip can repeat forever without a visible cut.
 `.trim();
 
 const CLIPS = [
@@ -126,12 +142,13 @@ async function submit(clip) {
     headers,
     body: JSON.stringify({
       image_url: dataUri,
+      /* Start and end on the same frame — this is what makes it loop. */
+      end_image_url: dataUri,
       prompt: `${clip.prompt.replace(/\s+/g, " ").trim()}\n\n${MOTION_RULES}`,
-      negative_prompt:
-        "camera movement, zoom, pan, morphing, new objects, text, watermark, " +
-        "photorealistic, 3d render, blurry, distorted shapes, fast motion",
       duration: clip.duration,
-      cfg_scale: 0.5,
+      resolution: RESOLUTION,
+      camera_fixed: true,
+      aspect_ratio: "auto",
     }),
   });
 

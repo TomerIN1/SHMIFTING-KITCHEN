@@ -36,7 +36,9 @@ export type GlyphName =
   | "cross"
   | "pencil"
   | "print"
-  | "exit";
+  | "exit"
+  | "sound"
+  | "silence";
 
 const PATHS: Record<GlyphName, React.ReactNode> = {
   check: <path d="M4 12.6 L8.8 17.4 L20 5.6" />,
@@ -149,6 +151,24 @@ const PATHS: Record<GlyphName, React.ReactNode> = {
       <path d="M13.4 3.4 L4.6 3.6 L4.4 20.4 L13.4 20.6" />
       <path d="M10.2 12 L20.6 11.9" />
       <path d="M17.2 8.4 L20.8 11.95 L17.3 15.6" />
+    </>
+  ),
+  /* A cone with two arcs leaving it. The arcs are drawn slightly unequal so
+     the shape reads as hand-inked rather than as a system icon. */
+  sound: (
+    <>
+      <path d="M2.9 9.5 L6.6 9.4 L11.6 4.7 C11.8 9.2 11.8 15.1 11.6 19.4 L6.7 14.7 L3.1 14.6 Z" />
+      <path d="M14.6 9.1 C16.1 10.6 16.2 13.6 14.7 15.2" />
+      <path d="M17.6 6.3 C20.3 9 20.4 15.3 17.7 18" />
+    </>
+  ),
+  /* The same cone, silenced. A struck-through cone is the one convention
+     §53 allows borrowing outright — anything cleverer would be a guess at
+     16px, and a control nobody recognises is worse than a familiar one. */
+  silence: (
+    <>
+      <path d="M2.9 9.5 L6.6 9.4 L11.6 4.7 C11.8 9.2 11.8 15.1 11.6 19.4 L6.7 14.7 L3.1 14.6 Z" />
+      <path d="M15.2 9.6 L20.5 14.7 M20.6 9.5 L15.1 14.8" />
     </>
   ),
 };

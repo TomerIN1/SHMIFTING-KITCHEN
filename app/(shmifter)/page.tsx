@@ -144,6 +144,22 @@ export default async function HomePage() {
           <br />
           <span className="text-cream">אנחנו מחלקים רגעים.</span>
         </p>
+
+        {/* Mixkit gives their music away and asks for nothing back. A camp
+            whose whole premise is gifting says thank you out loud. Small,
+            below the fold, and never competing with the camp's own line. */}
+        <p className="mt-8 text-xs leading-relaxed text-cream-dim">
+          מוזיקת הרקע באדיבות{" "}
+          <a
+            href="https://mixkit.co"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline decoration-cream-dim/50 underline-offset-4 transition-colors hover:text-sun hover:decoration-sun"
+          >
+            mixkit.co
+          </a>
+          , שמחלקים אותה בחינם. תודה.
+        </p>
       </footer>
     </div>
   );

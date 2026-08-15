@@ -38,7 +38,7 @@ export function UserBadge({
         <Link
           href={inHq ? "/" : "/hq"}
           title={inHq ? "חזרה לצד של הקמפ" : "לניהול המטבח"}
-          className="flex items-center gap-1.5 rounded-[9px_11px_8px_10px] border-2 border-charcoal-5 bg-charcoal-3 px-2.5 py-1.5 text-xs font-medium text-cream-2 transition-colors hover:border-sun hover:text-sun"
+          className="flex items-center gap-1.5 whitespace-nowrap rounded-[9px_11px_8px_10px] border-2 border-charcoal-5 bg-charcoal-3 px-2.5 py-1.5 text-xs font-medium text-cream-2 transition-colors hover:border-sun hover:text-sun"
         >
           <Glyph name={inHq ? "arrow" : "pot"} strokeWidth={2} />
           {/* Always labelled. A bare arrow beside an avatar reads as browser

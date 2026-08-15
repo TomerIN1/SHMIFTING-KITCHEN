@@ -2,7 +2,51 @@
 
 **Immediate handover. Read this second, after `project_summary.md` (CLAUDE.md §0.1).**
 
-Written: 2026-08-15, end of session 1 (the foundation session).
+Written: 2026-08-15, session 1 (the foundation session).
+Updated: 2026-08-15, session 2 — see §0 for what session 2 changed.
+
+---
+
+## 0. WHAT SESSION 2 DID
+
+**Ambient music — done and verified in the browser (was §2B, "blocked").**
+The block dissolved: the user supplied three tracks from **mixkit.co**, so
+nothing had to be generated and the `FAL_KEY`-for-audio question in CLAUDE.md
+§0.3 never had to be answered. **Do not treat §0.3 as amended — it is not.**
+
+The user gave two instructions that shaped the result, in this order:
+1. *"when one clip end you lower vol, replace to the new treck increase vol
+   again"*
+2. *"you need to let one clip finish before playing the next one. one after
+   one"*
+
+The second overrode the first where they conflicted. The shipped behaviour:
+each clip plays **all the way to its own ending**, then the next one loads and
+lifts from silence over 2.6 s. There is no early fade-out and no overlap. The
+only fade-down is when a member switches sound off.
+
+Two real defects were found by watching the running product rather than reading
+the code — both would have shipped silently:
+
+- **The music played at volume 0 with the button lit.** Two causes, found in
+  order. First, driving the fade from `play().then(…)` raced the end-of-track
+  fade that was still animating. Then, more seriously, the unmount cleanup
+  called `cancelAnimationFrame` without nulling the stored handle, so
+  `ensureLoop`'s "already running" guard stayed true forever and the loop never
+  started again — React's dev double-mount triggers this on every page load.
+  Both are recorded as gotchas in `project_summary.md` §8.
+- **The header wrapped onto two lines at 390 px.** The extra control pushed
+  "מטבח HQ" over; fixed with `whitespace-nowrap` on the door link in
+  `UserBadge.tsx`. Only the Kitchen Lead ever saw it, since the door is
+  admin-only on the camp side.
+
+**Video (§2C below) — still blocked, but re-aimed.** `scripts/animate-assets.mjs`
+now uses **Seedance 1.0 Pro** instead of Kling, at 1080p, with `camera_fixed:
+true` and `end_image_url` set to the same frame as `image_url` so the clip ends
+where it began and loops with no seam. Read §2C for the account problem.
+
+Not started this session: **§2A recipes-before-voting** and **§2D the screen-by-
+screen QA**, including the empty-state pass. Those are still the next work.
 
 ---
 
@@ -79,7 +123,15 @@ There is nowhere to hang a recipe that has not been scheduled yet.
 
 ---
 
-### 2B. MUSIC — blocked on a decision only the user can make
+### 2B. MUSIC — ✅ DONE IN SESSION 2. Kept below for the reasoning only.
+
+**The rest of this section is history.** It is preserved because the Design
+Book analysis still governs any future change to the sound, and because the
+`FAL_KEY`-for-audio question it raises was never answered and must not be
+assumed. Resolution: the user supplied licensed tracks (option 1), so nothing
+was generated. See §0.
+
+
 
 Design Book §51 governs this completely, and is unusually prescriptive:
 
@@ -105,9 +157,39 @@ Do not quietly pick one. Committing generated music under an ambiguous permissio
 
 ---
 
-### 2C. VIDEO CLIPS ON THE MAIN PAGE — 90% done, blocked on account balance
+### 2C. VIDEO CLIPS ON THE MAIN PAGE — still blocked on the FAL account
 
-Everything is written and waiting:
+**Session 2 status.** The user asked for the main-page hero clip specifically,
+using "seedance top quality", looping first frame to last. The script was
+re-aimed accordingly and is ready to run:
+
+- model is now `fal-ai/bytedance/seedance/v1/pro/image-to-video` at `1080p`;
+- `camera_fixed: true` pins the camera natively instead of asking the prompt to;
+- `end_image_url` is set to the **same frame** as `image_url`, so the clip ends
+  where it began and the loop closes with no visible cut;
+- the **Pro** endpoint is required — on Lite, `end_image_url` is deprecated and
+  ignored, so the loop would silently not happen.
+
+**It still cannot run.** Three attempts, before and after the model change:
+
+```
+403 {"detail":"User is locked. Reason: Exhausted balance."}
+```
+
+The user stated twice that the account has credits. The key is not the problem —
+a wrong key returns 401, and this returns 403 with an account-level lock, so the
+key authenticates and the account it belongs to is the one that is out of
+balance. The likely explanation is that the credits were added to a **different
+fal account** than the one this key belongs to, or that the lock has not cleared.
+Resolving it needs someone to check fal.ai/dashboard/billing **while signed in as
+the owner of this key** — it cannot be diagnosed from inside the repo, and
+`.env` must not be read (CLAUDE.md §0.3).
+
+Once it runs: `npm run assets:animate -- --only=hero-home`. Nothing else is
+needed — `lib/motion.ts` detects the file at request time and the Home already
+renders `AmbientPoster`.
+
+The original session-1 notes follow.
 
 - `scripts/animate-assets.mjs` defines three clips (`hero-home`, `hero-locked`, `flame-lit`) with prompts constrained to ambient motion only — no camera moves, no new objects (Design Book §48).
 - `lib/motion.ts` detects `public/motion/<name>.mp4` at request time.

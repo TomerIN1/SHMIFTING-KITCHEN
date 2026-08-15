@@ -145,6 +145,30 @@ Visual grammar, expressed as utilities: `shm-outline` (2.5px ink border), `shm-l
 
 **Crossing between the two experiences.** `UserBadge` takes a `context` prop (`"member"` | `"hq"`) and shows the door to the *other* side: the camp header offers "מטבח HQ" to admins, the HQ header offers "חזרה לקמפ" to everyone. Both are needed — the Kitchen Lead is also a camp member with a profile, votes and shifts, so they move between the two sides constantly. Pass `context="hq"` in `app/hq/layout.tsx`; the default is `"member"`.
 
+### Ambient sound
+
+`components/shmifting/AmbientSound.tsx`, mounted in the **camp header only** —
+Kitchen HQ is silent on purpose, because the Lead may sit in there for an hour
+(Design Book §28). Three tracks from **mixkit.co**, transcoded to 112 kbps AAC
+(`public/audio/shmift-0{1,2,3}.m4a`, 12.8 MB of source mp3 → 6.0 MB). The
+mp3 originals are committed in `music-clip-shmifting/`.
+
+Design Book §51 is followed literally: silent on a first visit, `preload="none"`
+so an unopted member downloads nothing, one button and no player chrome, and
+nothing in the product gated behind audio. The preference is a localStorage key
+(`shmifting:sound`) — a per-device comfort setting, not camp data. If a stored
+"on" cannot autoplay without a gesture, the component accepts the silence and
+shows the button as off rather than nagging.
+
+**Tracks play one at a time, each to its own natural ending.** No cross-fade and
+no early fade-out: these pieces are written to resolve, and cutting the tail is
+what makes background music sound like a playlist. The only fades are in — a new
+track lifts from silence over 2.6 s — and the deliberate 1.1 s fade-down when a
+member switches sound off.
+
+The credit sits in the Home footer with a link to mixkit.co. They do not require
+it; a camp built on other people's generosity says so anyway.
+
 ### Artwork
 21 assets generated with `gpt-image-1` (`scripts/generate-assets.mjs`), each carrying the full Shmifting visual contract in its prompt (Design Book §55). Optimised to WebP. The originals are archived in `public/assets/original/` (gitignored).
 
@@ -174,12 +198,12 @@ because two of these need a decision before any code:
    and so the winner converts into a meal with quantities already done. Blocked
    by a schema constraint — `dishes.mealId` is NOT NULL, so no recipe can exist
    before a meal does. Design sketched in `next_session_plan.md` §2A.
-2. **Ambient music**, governed entirely by Design Book §51: opt-in, silent by
-   default, never gating a task, never a music player. Blocked on where the
-   audio comes from — see `next_session_plan.md` §2B, which needs the user's
-   answer before anything is generated.
-3. **Video on the main page.** Already built end to end; waiting only on a FAL
-   account balance.
+2. ~~**Ambient music.**~~ **Done in session 2.** The user supplied three tracks
+   from mixkit.co, so the FAL-permission question in §0.3 never had to be
+   answered — nothing was generated. See §5 "Ambient sound".
+3. **Video on the main page.** Built end to end and now pointed at Seedance 1.0
+   Pro with a closed loop; still waiting on the FAL account, which returns
+   `403 User is locked. Reason: Exhausted balance.`
 4. **A systematic pass over every screen**, continuing the visual QA that found
    four real defects in session 1.
 
@@ -201,6 +225,7 @@ because two of these need a decision before any code:
 ## 8. GOTCHAS
 
 - **Tailwind v4 cannot see computed class names.** `accents.ts` writes every class out in full. Never build one with string interpolation or `.replace()` — that bug shipped once already.
+- **Never drive audio volume from `requestAnimationFrame`.** rAF stops in a hidden tab, and a hidden tab is where background music actually lives — a track that ended in another tab would come back playing at volume 0. `AmbientSound` uses a `setInterval` loop with `dt` clamped to 1 s so a throttled tick still carries a real slice of the fade. Related: a cleanup that calls `cancelAnimationFrame` **must also null the stored handle**, or the "is the loop running?" guard stays true forever and the loop never restarts. React's dev double-mount triggers exactly that, and it cost an hour.
 - **`server-only` breaks standalone `tsx` scripts.** Anything importing `lib/data/*` only runs inside Next. Verify domain logic through the browser, or write a script against `lib/domain/*` (pure) instead.
 - **Ingredient cost is quoted per `ingredients.defaultUnit`.** Aggregation may land on a different unit in the same dimension (500 g rather than 0.5 kg). `convertUnitCost()` restates the price. Skipping it produced a ₪39,894 projection instead of ~₪1,600.
 - **`.env` is off limits** (CLAUDE.md §0.3). `AUTH_SECRET` was added to `.env.local` instead, which Next also loads and which takes precedence.

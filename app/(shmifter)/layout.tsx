@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth/guard";
 import { SignpostNav, SignpostRail } from "@/components/shmifting/SignpostNav";
 import { WordmarkLink } from "@/components/shmifting/Wordmark";
 import { UserBadge } from "@/components/shmifting/UserBadge";
+import { AmbientSound } from "@/components/shmifting/AmbientSound";
 import { getRoundsForMember } from "@/lib/data/votes";
 import { getMyShifts } from "@/lib/data/shifts";
 import { getSettings } from "@/lib/data/camp";
@@ -43,7 +44,14 @@ export default async function ShmifterLayout({
       <header className="no-print sticky top-0 z-40 border-b-2 border-ink/70 bg-charcoal/85 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 px-4 py-2.5 sm:px-6">
           <WordmarkLink className="w-[132px] sm:w-[160px]" />
-          <UserBadge user={user} />
+          <div className="flex items-center gap-2">
+            {/* Lives in the layout, not on a page, so the music survives
+                moving between the profile, the vote and the shifts. It is
+                mounted on the camp side only — Kitchen HQ stays silent,
+                because the Lead may sit in there for an hour (§28). */}
+            <AmbientSound />
+            <UserBadge user={user} />
+          </div>
         </div>
       </header>
 
