@@ -18,7 +18,10 @@ export const getRounds = cache(async () => {
   return db.query.voteRounds.findMany({
     orderBy: [desc(voteRounds.createdAt)],
     with: {
-      options: { orderBy: (o, { asc: a }) => [a(o.sortOrder)] },
+      options: {
+        orderBy: (o, { asc: a }) => [a(o.sortOrder)],
+        with: { suggester: { columns: { name: true } } },
+      },
       votes: true,
     },
   });
@@ -38,6 +41,7 @@ export interface RoundResult {
     description: string | null;
     dishes: string | null;
     dietaryNote: string | null;
+    mealDate: Date | null;
     imageUrl: string | null;
     accent: string;
     flames: number;
@@ -63,6 +67,7 @@ export async function summariseRound(round: RoundRow): Promise<RoundResult> {
       title: option.title,
       description: option.description,
       dishes: option.dishes,
+      mealDate: option.mealDate,
       dietaryNote: option.dietaryNote,
       imageUrl: option.imageUrl,
       accent: option.accent,
@@ -105,7 +110,10 @@ export const getRoundsForMember = cache(async (userId: string) => {
   const rounds = await db.query.voteRounds.findMany({
     orderBy: [asc(voteRounds.closesAt), desc(voteRounds.createdAt)],
     with: {
-      options: { orderBy: (o, { asc: a }) => [a(o.sortOrder)] },
+      options: {
+        orderBy: (o, { asc: a }) => [a(o.sortOrder)],
+        with: { suggester: { columns: { name: true } } },
+      },
       votes: true,
     },
   });

@@ -34,6 +34,14 @@ const EMPTY: VoteAdminState = {};
    simply confirming.
    ========================================================================= */
 
+/* <input type="date"> wants YYYY-MM-DD in local time. toISOString() would hand
+   it UTC and shift the evening by a day for anyone east of Greenwich, which is
+   everybody here. */
+function toDateInput(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 export function RoundStatusControls({
   roundId,
   status,
@@ -238,6 +246,7 @@ export function OptionEditor({
     description: string | null;
     dishes: string | null;
     dietaryNote: string | null;
+    mealDate: Date | null;
     flames: number;
     share: number;
     voters: number;
@@ -303,6 +312,15 @@ export function OptionEditor({
                   maxLength={120}
                 />
               </label>
+              <label className="block">
+                <span className="mb-1 block text-[12px] text-cream-dim">
+                  באיזה ערב
+                </span>
+                <ToolInput type="date" name="mealDate" />
+                <span className="mt-1 block text-[11.5px] text-cream-dim">
+                  אפשר להשאיר ריק ולהחליט אחרי ההצבעה.
+                </span>
+              </label>
             </div>
             <div className="flex items-center gap-2">
               <ToolButton type="submit" accent="sun" active disabled={pending}>
@@ -337,6 +355,7 @@ function OptionRow({
     description: string | null;
     dishes: string | null;
     dietaryNote: string | null;
+    mealDate: Date | null;
     flames: number;
     share: number;
     voters: number;
@@ -370,6 +389,16 @@ function OptionRow({
             defaultValue={option.dietaryNote ?? ""}
             maxLength={120}
           />
+          <label className="block sm:col-span-2">
+            <span className="mb-1 block text-[12px] text-cream-dim">
+              באיזה ערב מבשלים את זה
+            </span>
+            <ToolInput
+              type="date"
+              name="mealDate"
+              defaultValue={option.mealDate ? toDateInput(option.mealDate) : ""}
+            />
+          </label>
         </div>
         <div className="flex gap-2">
           <ToolButton type="submit" accent="sun" active>

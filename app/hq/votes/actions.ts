@@ -151,6 +151,17 @@ export async function deleteRound(formData: FormData): Promise<void> {
 
 /* ---- options ------------------------------------------------------------ */
 
+
+/* "2026-11-04" from a date input, or null when the Lead has not decided which
+   evening this cuisine lands on yet. Noon avoids the timezone off-by-one that
+   turns a Wednesday dinner into Tuesday. */
+function optionDate(formData: FormData): Date | null {
+  const raw = String(formData.get("mealDate") ?? "").trim();
+  if (!raw) return null;
+  const date = new Date(`${raw}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export async function addOption(
   _prev: VoteAdminState,
   formData: FormData,
@@ -175,6 +186,7 @@ export async function addOption(
     description: String(formData.get("description") ?? "").trim() || null,
     dishes: String(formData.get("dishes") ?? "").trim() || null,
     dietaryNote: String(formData.get("dietaryNote") ?? "").trim() || null,
+    mealDate: optionDate(formData),
     accent: palette[count % palette.length],
     sortOrder: count,
   });
@@ -195,6 +207,7 @@ export async function updateOption(formData: FormData): Promise<void> {
       description: String(formData.get("description") ?? "").trim() || null,
       dishes: String(formData.get("dishes") ?? "").trim() || null,
       dietaryNote: String(formData.get("dietaryNote") ?? "").trim() || null,
+      mealDate: optionDate(formData),
     })
     .where(eq(voteOptions.id, id));
 
@@ -228,7 +241,7 @@ export async function promoteToMeal(formData: FormData): Promise<void> {
   const mealId = newId();
   await db.insert(meals).values({
     id: mealId,
-    date: option.round.mealDate ?? new Date(),
+    date: option.mealDate ?? option.round.mealDate ?? new Date(),
     mealType:
       option.round.mealType === "other" ? "dinner" : option.round.mealType,
     title: option.title,

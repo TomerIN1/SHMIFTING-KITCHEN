@@ -2,6 +2,7 @@ import Image from "next/image";
 import { requireUser } from "@/lib/auth/guard";
 import { getRoundsForMember, type MemberRound } from "@/lib/data/votes";
 import { VoteBoard } from "./VoteBoard";
+import { SuggestIdea } from "./SuggestIdea";
 import { EmptyState } from "@/components/shmifting/EmptyState";
 import { StatusChip } from "@/components/shmifting/Status";
 import { Glyph } from "@/components/shmifting/Glyph";
@@ -149,6 +150,9 @@ function OpenRound({ round }: { round: MemberRound }) {
         options={round.options}
         initial={round.myVotes}
       />
+
+      {/* The board belongs to the camp, not to whoever wrote the list. */}
+      <SuggestIdea roundId={round.id} />
     </section>
   );
 }

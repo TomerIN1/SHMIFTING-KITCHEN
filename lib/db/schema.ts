@@ -213,6 +213,19 @@ export const voteOptions = sqliteTable(
        time these are still concepts, not yet operational dish records. */
     dishes: text("dishes"),
     dietaryNote: text("dietary_note"),
+    /* Which evening this one would be, when the Lead has decided. The round's
+       own mealDate used to set the date for every option in it, which only
+       works when a round IS one night. It is not: a round is a menu of
+       cuisine nights the camp is choosing between, and the Lead assigns each
+       winner to its own evening. Falls back to the round's date when unset. */
+    mealDate: integer("meal_date", { mode: "timestamp" }),
+    /* Who thought of it, when it came from the camp rather than the Kitchen
+       Lead. NULL means the Lead added it. Set-null on delete so a person
+       leaving takes their name off the idea without taking the idea with
+       them — the camp may already have voted for it. */
+    suggestedBy: text("suggested_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     imageUrl: text("image_url"),
     /* Which palette member this concept wears. Design Book §9: colour is
        distributed across the world, not assigned to one primary. */
@@ -486,6 +499,11 @@ export const voteOptionsRelations = relations(voteOptions, ({ one, many }) => ({
   round: one(voteRounds, {
     fields: [voteOptions.roundId],
     references: [voteRounds.id],
+  }),
+  /* Who suggested it, so the board can say so by name. */
+  suggester: one(users, {
+    fields: [voteOptions.suggestedBy],
+    references: [users.id],
   }),
   votes: many(votes),
 }));

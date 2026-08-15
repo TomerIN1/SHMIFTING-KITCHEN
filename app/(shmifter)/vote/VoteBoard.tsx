@@ -31,6 +31,7 @@ export interface VoteOptionView {
   dishes: string | null;
   dietaryNote: string | null;
   accent: string;
+  suggester?: { name: string } | null;
 }
 
 const EMPTY: VoteState = {};
@@ -217,6 +218,13 @@ function ConceptCard({
           {option.dietaryNote && (
             <p className="mt-0.5 text-[12.5px] text-ink/70">
               {option.dietaryNote}
+            </p>
+          )}
+          {/* Credit by name. An idea with a person attached is worth more than
+              an anonymous line, and it is also the only moderation this needs. */}
+          {option.suggester && (
+            <p className="mt-1 text-[12px] text-ink/55">
+              הרעיון של {option.suggester.name}
             </p>
           )}
 

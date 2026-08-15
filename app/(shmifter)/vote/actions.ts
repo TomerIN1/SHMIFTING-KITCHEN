@@ -103,3 +103,83 @@ export async function roundIsOpen(roundId: string): Promise<boolean> {
   if (!round || round.status !== "open") return false;
   return !round.closesAt || round.closesAt.getTime() >= Date.now();
 }
+
+/* ============================================================================
+   SUGGESTING AN IDEA — Bible §12
+
+   Voting is meant to feel like a camp activity, not a survey somebody else
+   wrote. A member who knows exactly what the desert needs on Wednesday should
+   be able to put it on the board rather than lobby the Kitchen Lead in a
+   group chat.
+
+   Ideas appear immediately, credited by name. There is no approval queue on
+   purpose: a queue makes a warm act feel like submitting a form, and the Lead
+   can already edit or delete any option from HQ (Bible §23). The name is the
+   moderation — people behave when their idea has their face on it.
+   ========================================================================= */
+
+const suggestSchema = z.object({
+  roundId: z.string().min(1),
+  title: z
+    .string()
+    .trim()
+    .min(2, "צריך שם למנה")
+    .max(80, "קצר יותר, בבקשה"),
+  description: z.string().trim().max(300).optional(),
+});
+
+export interface SuggestState {
+  ok?: boolean;
+  error?: string;
+}
+
+export async function suggestOption(
+  _prev: SuggestState,
+  formData: FormData,
+): Promise<SuggestState> {
+  const user = await assertUser();
+
+  const parsed = suggestSchema.safeParse({
+    roundId: formData.get("roundId"),
+    title: formData.get("title"),
+    description: String(formData.get("description") ?? "") || undefined,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const { roundId, title, description } = parsed.data;
+
+  /* Only into a round that is actually open. A closed round's results are
+     final (Bible §13), and an upcoming one is still the Lead's draft. */
+  const round = await db.query.voteRounds.findFirst({
+    where: eq(voteRounds.id, roundId),
+    with: { options: true },
+  });
+  if (!round) return { error: "ההצבעה לא נמצאה" };
+  if (round.status !== "open") return { error: "ההצבעה סגורה לרעיונות חדשים" };
+
+  /* Same dish twice helps nobody — it splits the flames between two identical
+     cards and makes a popular idea look unpopular. */
+  const exists = round.options.some(
+    (o) => o.title.trim().toLowerCase() === title.toLowerCase(),
+  );
+  if (exists) return { error: "הרעיון הזה כבר על הלוח" };
+
+  const palette = ["sun", "terracotta", "pink", "lavender", "dust-blue", "peach"];
+
+  const { voteOptions } = await import("@/lib/db/schema");
+  await db.insert(voteOptions).values({
+    id: newId(),
+    roundId,
+    title,
+    description: description || null,
+    suggestedBy: user.id,
+    accent: palette[round.options.length % palette.length],
+    sortOrder: round.options.length,
+  });
+
+  revalidatePath("/vote");
+  revalidatePath("/hq/votes", "layout");
+  return { ok: true };
+}
