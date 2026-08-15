@@ -250,7 +250,7 @@ export async function promoteToMeal(formData: FormData): Promise<void> {
 
   const option = await db.query.voteOptions.findFirst({
     where: eq(voteOptions.id, optionId),
-    with: { round: true },
+    with: { round: true, costedDishes: true },
   });
   if (!option?.round) return;
 
@@ -268,16 +268,35 @@ export async function promoteToMeal(formData: FormData): Promise<void> {
     sourceRoundId: option.round.id,
   });
 
-  const lines = (option.dishes ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
-  for (const [i, name] of lines.entries()) {
-    await db.insert(dishes).values({
-      id: newId(),
-      mealId,
-      name,
-      role: i === 0 ? "main" : "side",
-      dietary: "omnivore",
-      sortOrder: i,
-    });
+  /* If the evening was costed while the camp was still voting, its dishes
+     already exist — with their recipes, quantities and prices. Re-parent them
+     onto the meal rather than creating fresh stubs beside them, or the work
+     is silently orphaned and somebody retypes thirty ingredients.
+
+     `recipes.dishId` points at the dish, not the meal, so the recipes travel
+     with it and nothing else has to move. */
+  if (option.costedDishes.length > 0) {
+    await db
+      .update(dishes)
+      .set({ mealId, voteOptionId: null })
+      .where(eq(dishes.voteOptionId, option.id));
+  } else {
+    /* Never costed. Fall back to the written menu so the meal at least
+       arrives with its dishes named. */
+    const lines = (option.dishes ?? "")
+      .split("\n")
+      .map((l: string) => l.trim())
+      .filter(Boolean);
+    for (const [i, name] of lines.entries()) {
+      await db.insert(dishes).values({
+        id: newId(),
+        mealId,
+        name,
+        role: i === 0 ? "main" : "side",
+        dietary: "omnivore",
+        sortOrder: i,
+      });
+    }
   }
 
   revalidatePath("/hq/menu", "layout");

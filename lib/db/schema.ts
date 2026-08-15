@@ -6,6 +6,7 @@ import {
   real,
   uniqueIndex,
   index,
+  check,
 } from "drizzle-orm/sqlite-core";
 
 /* ============================================================================
@@ -315,9 +316,28 @@ export const dishes = sqliteTable(
   "dishes",
   {
     id: id(),
-    mealId: text("meal_id")
-      .notNull()
-      .references(() => meals.id, { onDelete: "cascade" }),
+    /* A dish hangs off EXACTLY ONE of these two, never both, never neither.
+       Enforced in the domain layer rather than by SQLite, which cannot express
+       it — see assertOneParent() in lib/domain/dishes.ts.
+
+       mealId       the dish is on the menu. It is being cooked.
+       voteOptionId the dish belongs to an evening the camp is still voting on.
+                    It is a costed proposal, not a commitment.
+
+       Both are nullable because of the second case. Until this existed a
+       recipe could not be written before its evening had already won, which
+       is backwards: you want the price BEFORE you commit, and the camp votes
+       for weeks. Promotion re-parents the dishes onto the new meal, carrying
+       their recipes with them, so nothing is retyped.
+
+       CRITICAL: a dish on a losing evening must never reach the shopping list,
+       the budget, the readiness engine or the printed pack. Everything
+       operational walks the MENU, so it is safe by construction — but any new
+       query that starts from `dishes` has to say which kind it wants. */
+    mealId: text("meal_id").references(() => meals.id, { onDelete: "cascade" }),
+    voteOptionId: text("vote_option_id").references(() => voteOptions.id, {
+      onDelete: "cascade",
+    }),
     name: text("name").notNull(),
     role: text("role", {
       enum: ["main", "side", "salad", "sauce", "bread", "dessert", "drink"],
@@ -336,7 +356,19 @@ export const dishes = sqliteTable(
     notes: text("notes"),
     sortOrder: integer("sort_order").notNull().default(0),
   },
-  (t) => [index("dishes_meal_idx").on(t.mealId)],
+  (t) => [
+    index("dishes_meal_idx").on(t.mealId),
+    index("dishes_vote_option_idx").on(t.voteOptionId),
+    /* Exactly one parent, enforced by the database rather than by everyone
+       remembering to call a validator. A dish with neither is an orphan that
+       nothing will ever cook; a dish with both would be counted twice — once
+       as a proposal and once as a committed meal — and the second is the kind
+       of bug that shows up as a shopping list quietly ordering double. */
+    check(
+      "dishes_exactly_one_parent",
+      sql`(${t.mealId} is null) <> (${t.voteOptionId} is null)`,
+    ),
+  ],
 );
 
 export const recipes = sqliteTable(
@@ -513,6 +545,11 @@ export const voteRoundsRelations = relations(voteRounds, ({ many }) => ({
 }));
 
 export const voteOptionsRelations = relations(voteOptions, ({ one, many }) => ({
+  /* Costed dishes attached before the camp has decided. Deliberately NOT
+     called `dishes`: voteOptions already has a `dishes` TEXT column holding
+     the written menu, and a relation of the same name silently merges with it
+     into `string & Dish[]`, which type-checks in places it should not. */
+  costedDishes: many(dishes),
   round: one(voteRounds, {
     fields: [voteOptions.roundId],
     references: [voteRounds.id],
@@ -545,6 +582,10 @@ export const mealsRelations = relations(meals, ({ many, one }) => ({
 
 export const dishesRelations = relations(dishes, ({ one }) => ({
   meal: one(meals, { fields: [dishes.mealId], references: [meals.id] }),
+  voteOption: one(voteOptions, {
+    fields: [dishes.voteOptionId],
+    references: [voteOptions.id],
+  }),
   recipe: one(recipes, { fields: [dishes.id], references: [recipes.dishId] }),
 }));
 
