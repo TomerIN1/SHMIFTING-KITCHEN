@@ -113,6 +113,11 @@ export function AmbientSound() {
 
   const [on, setOn] = useState(false);
   const [index, setIndex] = useState(0);
+  /* The browser refused, and the member has not said no. This is NOT the same
+     as off, and used to look identical — a first-time visitor saw a dead grey
+     button and concluded the music was broken, when one tap would have started
+     it. The button now says so. */
+  const [blocked, setBlocked] = useState(false);
 
   /* Always clears the handle as well as the timer. Leaving a stale handle
      behind is not a tidiness point: `ensureLoop` treats a non-null handle as
@@ -289,14 +294,17 @@ export function AmbientSound() {
       .play()
       .then(() => {
         /* Playing without needing them — nothing left to wait for. */
+        setBlocked(false);
         disarmGesture();
       })
       .catch(() => {
         /* Autoplay refused. No amount of code gets around that: browsers
-           require a gesture before a page may make noise. Show the button as
-           off, because silence is what is actually happening, and let the
-           armed listener start us on their first touch. */
+           require a gesture before a page may make noise. Silence is what is
+           actually happening, so the button must not claim otherwise — but it
+           must also not look like the member switched it off, because the fix
+           is one tap and they need to know that. */
         setOn(false);
+        if (wantedRef.current) setBlocked(true);
       });
   }, [on, index, ensureLoop, armGesture, disarmGesture]);
 
@@ -324,6 +332,7 @@ export function AmbientSound() {
       /* Say it and mean it: cancel the pending gesture too, or their very
          next click would turn the music straight back on. */
       wantedRef.current = false;
+      setBlocked(false);
       disarmGesture();
       try {
         localStorage.setItem(STORAGE_KEY, "off");
@@ -338,7 +347,11 @@ export function AmbientSound() {
     }
   }
 
-  const label = on ? "לכבות את המוזיקה" : "להדליק מוזיקת רקע";
+  const label = on
+    ? "לכבות את המוזיקה"
+    : blocked
+      ? "יש מוזיקה — הקישו כדי להפעיל"
+      : "להדליק מוזיקת רקע";
 
   return (
     <>
@@ -353,10 +366,14 @@ export function AmbientSound() {
           "border-2 transition-colors",
           on
             ? "border-sun text-sun"
-            : "border-charcoal-5 text-cream-dim hover:border-cream-dim hover:text-cream-2",
+            : blocked
+              ? /* Waiting for a tap, not switched off. Breathes so the eye
+                   finds it, which is the whole point. */
+                "animate-breathe border-sun/70 text-sun/90"
+              : "border-charcoal-5 text-cream-dim hover:border-cream-dim hover:text-cream-2",
         ].join(" ")}
       >
-        <Glyph name={on ? "sound" : "silence"} strokeWidth={2} />
+        <Glyph name={on || blocked ? "sound" : "silence"} strokeWidth={2} />
       </button>
 
       <audio
