@@ -76,6 +76,7 @@ Generate a fresh `AUTH_SECRET` for production — do not reuse the development o
 - **No test suite.** `lib/domain/*` is pure and the obvious place to start — `practicalRound`, `scaleRecipe`, `aggregateIngredients`, `analyseMeal`, `computeReadiness` are all deterministic and were the source of the two real bugs found this session.
 - **Concurrency on shift capacity** is checked-then-inserted rather than transactional. For a camp of tens of people this is fine; two people racing for the last slot in the same millisecond could both get in.
 - **No rate limiting on sign-in.** Acceptable for a private camp behind an invite code; not acceptable if this is ever made public.
+- **`drizzle-kit push` needs a TTY** when a column change is ambiguous (it asks rename-vs-drop). It failed on the `arrivesOn` → `notComingAt` change and the dev database had to be reset. On a deployment with real data, generate a migration instead of pushing.
 - **`practicalRound` always rounds up.** Deliberate — running out of onions in the desert is a real failure, one spare onion is not. If the Lead disagrees they override the line, which is exactly the affordance Bible §23 asks for.
 
 ---

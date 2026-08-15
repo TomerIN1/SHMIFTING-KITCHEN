@@ -112,6 +112,18 @@ Two rules shape the whole schema:
 
 Tables: `users`, `foodProfiles`, `allergies`, `settings` (single row, id `camp`), `voteRounds`, `voteOptions`, `votes`, `meals`, `dishes`, `recipes`, `ingredients`, `recipeItems`, `shifts`, `shiftAssignments`, `shoppingItems`.
 
+### Who is coming — `users.notComingAt`
+
+Null means coming. This one column is what makes a dropout real, and **`getDiners()` in `lib/data/camp.ts` is the single place it is enforced** — every dietary calculation, the allergy centre, the breakdown, the shift quota and readiness all flow through it.
+
+Two reads exist deliberately:
+- `getPeople()` — everyone on record. Only for the roster manager itself (`/hq/people`) and role management (`/hq/settings`).
+- `getActivePeople()` — only people coming. **This is what belongs in every person-picker and in the printed pack.** Assigning a shift to somebody who is not turning up is worse than leaving it unassigned, because it looks handled.
+
+If you add a screen that lists or offers people, use `getActivePeople()`. The Allergy Center queries `allergies` directly and needed its own `notComingAt` guard — a safety sheet listing somebody who is not in the desert spends a cook's attention on a risk that is not there.
+
+Marking somebody not-coming frees their shifts and un-assigns their shopping items, but **keeps their votes**: Bible §13 makes closed results final, and the menu was already chosen from those flames. Hard deletion exists separately for duplicates and test accounts, gated behind typing the person's exact name.
+
 ---
 
 ## 5. DESIGN SYSTEM

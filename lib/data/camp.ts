@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { settings, users } from "@/lib/db/schema";
 import type { DinerInput } from "@/lib/domain/coverage";
@@ -40,9 +40,15 @@ export const getSettings = cache(async () => {
   return created;
 });
 
-/* The camp, shaped for every dietary calculation in the product. */
+/* The camp, shaped for every dietary calculation in the product.
+
+   Only people who are actually coming. This one filter is what makes
+   "not coming" mean something: it removes them from dietary coverage, the
+   allergy centre, the breakdown, the shift quota and readiness in a single
+   place, rather than each screen having to remember. */
 export const getDiners = cache(async (): Promise<DinerInput[]> => {
   const rows = await db.query.users.findMany({
+    where: isNull(users.notComingAt),
     with: { profile: true, allergies: true },
     orderBy: [asc(users.name)],
   });
@@ -64,8 +70,21 @@ export const getDiners = cache(async (): Promise<DinerInput[]> => {
 
 export const getBreakdown = cache(async () => campBreakdown(await getDiners()));
 
+/** Everyone on record, including people who dropped out. Use this only where
+    the Kitchen Lead is managing the roster itself. */
 export const getPeople = cache(async () => {
   return db.query.users.findMany({
+    with: { profile: true, allergies: true },
+    orderBy: [asc(users.name)],
+  });
+});
+
+/** Everyone still coming. This is what belongs in a person-picker: assigning
+    a shift or a shopping run to somebody who is not turning up is worse than
+    leaving it unassigned, because it looks handled. */
+export const getActivePeople = cache(async () => {
+  return db.query.users.findMany({
+    where: isNull(users.notComingAt),
     with: { profile: true, allergies: true },
     orderBy: [asc(users.name)],
   });

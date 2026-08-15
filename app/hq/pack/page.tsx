@@ -1,4 +1,4 @@
-import { getSettings, getPeople, getBreakdown } from "@/lib/data/camp";
+import { getSettings, getActivePeople, getBreakdown } from "@/lib/data/camp";
 import { getMenu, groupByDay } from "@/lib/data/menu";
 import { getShifts } from "@/lib/data/shifts";
 import { getRecipes } from "@/lib/data/recipes";
@@ -49,7 +49,7 @@ export default async function PackPage() {
   const [camp, people, breakdown, menu, shifts, recipes, shopping, budget, readiness] =
     await Promise.all([
       getSettings(),
-      getPeople(),
+      getActivePeople(),
       getBreakdown(),
       getMenu(),
       getShifts(),

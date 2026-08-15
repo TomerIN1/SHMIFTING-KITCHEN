@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { getPeople, getBreakdown, getSettings } from "@/lib/data/camp";
+import { currentUser } from "@/lib/auth/session";
+import { describeRemoval } from "./actions";
+import { PersonActions } from "./PersonActions";
 import { getShifts } from "@/lib/data/shifts";
 import { getRoundResults } from "@/lib/data/votes";
 import {
@@ -20,7 +23,7 @@ import {
   severityLabel,
   SPICE_LEVELS,
 } from "@/lib/domain/allergens";
-import { cn } from "@/lib/utils";
+import { cn, hebrewDate } from "@/lib/utils";
 
 export const metadata = { title: "אנשים — Kitchen HQ" };
 
@@ -36,13 +39,28 @@ export const metadata = { title: "אנשים — Kitchen HQ" };
    ========================================================================= */
 
 export default async function PeoplePage() {
-  const [people, breakdown, camp, shifts, rounds] = await Promise.all([
+  const [allPeople, breakdown, camp, shifts, rounds, me] = await Promise.all([
     getPeople(),
     getBreakdown(),
     getSettings(),
     getShifts(),
     getRoundResults(),
+    currentUser(),
   ]);
+
+  /* The roster splits in two: who is actually coming, and who dropped out.
+     Only the first group is in any kitchen calculation. */
+  const people = allPeople.filter((p) => !p.notComingAt);
+  const notComing = allPeople.filter((p) => p.notComingAt);
+  const adminCount = allPeople.filter((p) => p.role === "admin").length;
+
+  /* What a hard delete would destroy, per person — computed up front so the
+     confirmation can be specific rather than generic. */
+  const removalCosts = Object.fromEntries(
+    await Promise.all(
+      allPeople.map(async (p) => [p.id, await describeRemoval(p.id)] as const),
+    ),
+  );
 
   const shiftCount = new Map<string, number>();
   for (const shift of shifts) {
@@ -81,8 +99,29 @@ export default async function PeoplePage() {
     <div className="space-y-6">
       <HqHeading
         title="אנשים"
-        lead={`${people.length} אנשים בקמפ. זה מי שאתם מאכילים.`}
+        lead={`${people.length} אנשים מגיעים. זה מי שאתם מאכילים.`}
       />
+
+      {/* Bible §24: the head count that multiplies every recipe is a separate
+          manual number. When it drifts from who is actually coming, say so —
+          do not silently "fix" it, because the Lead may have set it high on
+          purpose (Bible §23). */}
+      {camp.expectedDiners !== people.length && (
+        <div className="rounded-md border-2 border-attention/50 border-s-[6px] border-s-attention bg-attention/[0.07] p-3.5">
+          <p className="flex items-center gap-2 font-display text-[15px] text-attention">
+            <Glyph name="alert" strokeWidth={2.4} />
+            המתכונים מוכפלים ל־{camp.expectedDiners} סועדים, אבל {people.length} אנשים מגיעים
+          </p>
+          <p className="mt-1 text-[13px] leading-snug text-cream-2/85">
+            {camp.expectedDiners > people.length
+              ? "אם זה בכוונה — מצוין, עודף אוכל במדבר זה לא אסון. אם לא, שווה לעדכן."
+              : "התכנון מבשל פחות ממספר האנשים שמגיעים. שווה לבדוק."}{" "}
+            <Link href="/hq/budget" className="underline hover:text-cream">
+              לעדכן את מספר הסועדים
+            </Link>
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Metric
@@ -155,6 +194,7 @@ export default async function PeoplePage() {
               <Th numeric>חריפות</Th>
               <Th numeric>הצבעות</Th>
               <Th numeric>משמרות</Th>
+              <Th />
             </>
           }
         >
@@ -285,11 +325,96 @@ export default async function PeoplePage() {
                     {shiftsTaken}/{camp.shiftsPerPerson}
                   </span>
                 </Td>
+
+                <Td numeric>
+                  {!camp.lockedAt && (
+                    <PersonActions
+                      userId={person.id}
+                      name={person.name}
+                      notComing={false}
+                      isSelf={person.id === me?.id}
+                      isLastAdmin={person.role === "admin" && adminCount <= 1}
+                      cost={
+                        removalCosts[person.id] ?? {
+                          voteCount: 0,
+                          closedRoundVotes: 0,
+                          shiftCount: 0,
+                          shoppingCount: 0,
+                          allergyCount: 0,
+                        }
+                      }
+                    />
+                  )}
+                </Td>
               </Tr>
             );
           })}
         </Table>
       </Panel>
+
+      {notComing.length > 0 && (
+        <Panel
+          title="לא מגיעים לקמפ"
+          accent="dust-blue"
+          action={
+            <span className="text-[12.5px] text-cream-dim">
+              {notComing.length} אנשים
+            </span>
+          }
+        >
+          <div className="p-4">
+            <p className="mb-3 max-w-2xl text-[13px] leading-relaxed text-cream-2/80">
+              הם לא נספרים באף חישוב של המטבח — לא בכמויות, לא בכיסוי התזונתי,
+              לא בדף האלרגיות ולא במכסת המשמרות. ההצבעות שלהם נשמרו, כי התפריט
+              נבחר לפיהן.
+            </p>
+            <ul className="divide-y divide-charcoal-4">
+              {notComing.map((person) => (
+                <li
+                  key={person.id}
+                  className="flex flex-wrap items-center justify-between gap-3 py-2.5"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span
+                      aria-hidden
+                      className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-charcoal-5 font-display text-[13px] text-cream-dim"
+                    >
+                      {person.name.trim().charAt(0)}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm text-cream-2">
+                        {person.name}
+                      </span>
+                      <span className="block text-[12px] text-cream-dim">
+                        יצא.ה מהרשימה ב־{hebrewDate(person.notComingAt!)}
+                      </span>
+                    </span>
+                  </span>
+
+                  {!camp.lockedAt && (
+                    <PersonActions
+                      userId={person.id}
+                      name={person.name}
+                      notComing
+                      isSelf={person.id === me?.id}
+                      isLastAdmin={person.role === "admin" && adminCount <= 1}
+                      cost={
+                        removalCosts[person.id] ?? {
+                          voteCount: 0,
+                          closedRoundVotes: 0,
+                          shiftCount: 0,
+                          shoppingCount: 0,
+                          allergyCount: 0,
+                        }
+                      }
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Panel>
+      )}
 
       {/* Bible §10: "Free-text answers can later help the Kitchen Lead
           understand what the camp actually wants." This is that payoff. */}

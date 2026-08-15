@@ -1,5 +1,5 @@
 import { getShifts, getShiftStats } from "@/lib/data/shifts";
-import { getPeople, getSettings } from "@/lib/data/camp";
+import { getActivePeople, getSettings } from "@/lib/data/camp";
 import { groupByDay } from "@/lib/data/menu";
 import { HqHeading, Metric, Table, Th, Td, Tr } from "@/components/hq/primitives";
 import { Panel } from "@/components/shmifting/surfaces";
@@ -27,7 +27,7 @@ export default async function HqShiftsPage() {
   const [shifts, stats, people, camp] = await Promise.all([
     getShifts(),
     getShiftStats(),
-    getPeople(),
+    getActivePeople(),
     getSettings(),
   ]);
 

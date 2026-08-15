@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 import { getBreakdown } from "@/lib/data/camp";
 import { getMenu } from "@/lib/data/menu";
 import { HqHeading, Metric } from "@/components/hq/primitives";
@@ -31,8 +33,19 @@ export const metadata = { title: "אלרגיות — Kitchen HQ" };
 
 export default async function AllergiesPage() {
   const [rows, breakdown, menu] = await Promise.all([
+    /* Only people who are actually coming. An allergy sheet that lists
+       somebody who dropped out spends a Kitchen Lead's attention — and, in
+       the printed pack, a cook's attention — on a risk that is not in the
+       desert. Safety screens must be exactly true, not merely complete. */
     db.query.allergies.findMany({
       with: { user: true },
+      where: (a, { exists, and, eq: equals, isNull: nul }) =>
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(users)
+            .where(and(equals(users.id, a.userId), nul(users.notComingAt))),
+        ),
     }),
     getBreakdown(),
     getMenu(),

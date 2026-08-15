@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getShoppingList, groupByCategory } from "@/lib/data/shopping";
-import { getPeople, getSettings } from "@/lib/data/camp";
+import { getActivePeople, getSettings } from "@/lib/data/camp";
 import { HqHeading, Metric, Table, Th, ProgressBar } from "@/components/hq/primitives";
 import { Panel } from "@/components/shmifting/surfaces";
 import { PanelEmpty } from "@/components/shmifting/EmptyState";
@@ -28,7 +28,7 @@ export const metadata = { title: "קניות — Kitchen HQ" };
 export default async function ShoppingPage() {
   const [list, people, camp] = await Promise.all([
     getShoppingList(),
-    getPeople(),
+    getActivePeople(),
     getSettings(),
   ]);
 

@@ -52,8 +52,20 @@ export const users = sqliteTable(
       .notNull()
       .default("shmifter"),
     avatarUrl: text("avatar_url"),
-    /* Some people in the camp are not eating with the kitchen every day. */
-    arrivesOn: integer("arrives_on", { mode: "timestamp" }),
+    /* People drop out. When they do they must vanish from every operational
+       calculation — the diner count, dietary coverage, the allergy sheet, the
+       shift quota — because cooking for someone who is not in the desert, or
+       reserving attention for an allergy that is not there, is exactly the
+       kind of error Bible §24 asks the product to prevent.
+
+       Null = coming. A timestamp rather than a boolean so the Kitchen Lead
+       can see WHEN somebody dropped out, which matters when a shift suddenly
+       has a hole in it.
+
+       Deliberately NOT a deletion: Bible §13 makes closed voting results
+       final, and deleting the person would silently rewrite a round the menu
+       was already chosen from. Their flames stay counted. */
+    notComingAt: integer("not_coming_at", { mode: "timestamp" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
