@@ -71,6 +71,27 @@ the player no longer unmounts, so a new member's sign-in starts the music on
 Media Engagement for origins where audio actually plays for more than a few
 seconds, repeat visits to the production domain do begin to autoplay outright.
 
+### Scroll was asked for, and is not possible
+
+The owner tested the fix on a phone, liked it, and asked for **the first scroll**
+to start the music too. It cannot: Chrome grants playback permission for taps
+and clicks, never for a touch that becomes a scroll. The product already listens
+for `touchstart` and `touchend`, which a finger-scroll fires, and it is still
+silent — that is the browser refusing, not a gap in the code.
+
+Shipped anyway, because it is free and helps where permission already exists:
+`DRIFT` (`scroll`/`wheel`/`touchmove`) retries playback, throttled to one
+attempt per 1.5 s, plus a `visibilitychange` retry for tabs opened in the
+background. Do not remove the throttle, and do not merge `DRIFT` into
+`GESTURES` — the real gestures must stay unthrottled or a single tap loses the
+`touchend`/`click` that actually carries the permission.
+
+**The only remaining lever for true mobile autoplay is a web manifest.** Chrome
+allowlists home-screen-installed sites, so an Android member who installs the
+app gets music on every launch with no gesture at all. It does nothing for
+iPhones — iOS Safari requires a gesture even for installed web apps. It has been
+offered twice and not yet taken up.
+
 ### Left open
 
 - **The Kitchen Lead lands on `/hq` at sign-in.** With HQ silent, the owner —

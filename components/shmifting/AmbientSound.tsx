@@ -156,6 +156,32 @@ const GESTURES = [
   "touchend",
 ] as const;
 
+/* Movement, which is NOT a gesture — and the difference is the browser's, not
+   ours.
+
+   Scrolling does not earn playback permission. Chrome grants it for tap and
+   click gestures; a touch that turns into a scroll is deliberately excluded,
+   because vendors do not count "I moved the page" as intentional engagement.
+   Verified on this product: we already listen for `touchstart` and `touchend`,
+   both of which a finger-scroll fires, and a scroll on a fresh mobile page
+   still produces silence. No amount of listening changes that.
+
+   So why listen at all? Because permission is not always missing. It is
+   already granted for an installed home-screen app, for a desktop origin that
+   has crossed Chrome's Media Engagement threshold, and for any tab where the
+   member interacted earlier. In every one of those cases a scroll is a
+   perfectly good moment to start, and without these events the music would
+   wait for a click that a reader scrolling an evening's menu may never make.
+
+   Throttled, and separated from GESTURES for a reason: these fire dozens of
+   times a second, and an unthrottled retry would mean a rejected play() per
+   scroll tick. The real gestures must NOT be throttled — one tap fires
+   pointerdown, then touchend, then click, and on mobile it is the later two
+   that carry the permission. Suppressing them as "too soon after pointerdown"
+   would throw away the only events that work. */
+const DRIFT = ["scroll", "wheel", "touchmove"] as const;
+const DRIFT_RETRY_MS = 1500;
+
 /* ── WHY THIS IS A PROVIDER AND NOT ONE SELF-CONTAINED COMPONENT ───────────
    The player used to be mounted three times — once in the welcome poster,
    once in the camp header, once in Kitchen HQ — which meant the <audio>
@@ -310,6 +336,28 @@ export function AmbientSoundProvider({
       setOn(true);
     };
 
+    /* Movement. Same attempt, throttled — see DRIFT. */
+    let lastDrift = 0;
+    const drift = () => {
+      const now = performance.now();
+      if (now - lastDrift < DRIFT_RETRY_MS) return;
+      lastDrift = now;
+      if (wantedRef.current) setOn(true);
+    };
+
+    /* A tab that was opened in the background — a middle-click, "open in new
+       tab", a link from a chat app — is REFUSED playback for being hidden,
+       which has nothing to do with gestures and never recovers on its own.
+       Chrome will not let a tab nobody is looking at start making noise, quite
+       rightly. So when the member finally brings it to the front, try again.
+       Without this the camp stayed silent for the whole visit for anybody who
+       did not open the link in the tab they were already looking at. */
+    const surfaced = () => {
+      if (document.visibilityState === "visible" && wantedRef.current) {
+        setOn(true);
+      }
+    };
+
     /* Capture phase: a gesture is consent for the page whether or not the
        component that received it lets the event bubble. Anything that calls
        stopPropagation() — a menu, a form control, a card that swallows its
@@ -318,10 +366,19 @@ export function AmbientSoundProvider({
     for (const type of GESTURES) {
       window.addEventListener(type, fire, { capture: true, passive: true });
     }
+    for (const type of DRIFT) {
+      window.addEventListener(type, drift, { capture: true, passive: true });
+    }
+    document.addEventListener("visibilitychange", surfaced);
+
     disarmRef.current = () => {
       for (const type of GESTURES) {
         window.removeEventListener(type, fire, { capture: true });
       }
+      for (const type of DRIFT) {
+        window.removeEventListener(type, drift, { capture: true });
+      }
+      document.removeEventListener("visibilitychange", surfaced);
     };
   }, []);
 

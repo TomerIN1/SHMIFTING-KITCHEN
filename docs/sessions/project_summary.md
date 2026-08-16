@@ -251,6 +251,30 @@ found in session 3:
   registered in the capture phase so a component calling `stopPropagation()`
   cannot hide the member's one qualifying interaction.
 
+**Scrolling does not start the music, and cannot be made to.** This was asked
+for directly and is worth recording so nobody spends another session on it.
+Chrome grants playback permission for tap and click gestures only; a touch that
+turns into a scroll is deliberately excluded, because vendors do not treat
+"I moved the page" as intentional engagement. Tested on a real phone against
+this product, which already listens for both `touchstart` and `touchend` — a
+finger-scroll fires both and still produces silence. The muted-autoplay-then-
+unmute trick does not help either: Chrome pauses a media element the moment it
+is unmuted without a gesture.
+
+`DRIFT` (`scroll`, `wheel`, `touchmove`) is listened to anyway, throttled to one
+attempt per 1.5 s, because permission is not always missing — an installed
+home-screen app, a desktop origin past Chrome's Media Engagement threshold, or
+a tab where the member interacted earlier all have it, and there a scroll is a
+fine moment to start. Kept separate from `GESTURES`, which must NEVER be
+throttled: one tap fires `pointerdown`, then `touchend`, then `click`, and on
+mobile it is the later two that carry the permission. Verified 300 rapid scroll
+events produce exactly one `play()` attempt.
+
+**A tab opened in the background is refused playback for being hidden**, which
+has nothing to do with gestures and never recovers by itself. The bridge also
+listens for `visibilitychange` and retries when the member finally brings the
+tab to the front.
+
 `preload` is set to `"auto"` on mount for members who want sound, and left at
 `"none"` for members who switched it off. With `"none"` the track was not
 fetched until the gesture arrived, so the moment meant to welcome somebody was
