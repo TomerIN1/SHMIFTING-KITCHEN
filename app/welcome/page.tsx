@@ -6,7 +6,7 @@ import { Wordmark } from "@/components/shmifting/Wordmark";
 import { Countdown } from "@/components/shmifting/Countdown";
 import { AuthForms } from "./AuthForms";
 import { AmbientPoster } from "@/components/shmifting/AmbientPoster";
-import { AmbientSound } from "@/components/shmifting/AmbientSound";
+import { SoundToggle } from "@/components/shmifting/AmbientSound";
 import { HERO } from "@/components/shmifting/assets";
 
 
@@ -52,7 +52,7 @@ export default async function WelcomePage() {
             out here to hang the control on, so it sits in the corner of the
             poster — still one button, still switchable off (§51). */}
         <div className="absolute start-4 top-4 z-10">
-          <AmbientSound />
+          <SoundToggle />
         </div>
 
         <div className="relative flex flex-col items-center gap-7 px-6 py-14 text-center">

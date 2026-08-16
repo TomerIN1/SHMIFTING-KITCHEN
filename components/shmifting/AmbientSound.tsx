@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { usePathname } from "next/navigation";
 import { Glyph } from "./Glyph";
 
 /* ============================================================================
@@ -109,11 +117,84 @@ const RESUME_WINDOW_MS = 90_000;
 /* What happens when a member has never said either way. */
 const DEFAULT_ON = true;
 
-/* Any of these counts as the gesture a browser is waiting for. */
-const GESTURES = ["pointerdown", "keydown", "touchstart"] as const;
+/* Where the camp does not play. Design Book §28: Kitchen HQ is an operational
+   tool and the Lead may sit in it for an hour, so the music is held at the
+   door rather than followed in.
 
-export function AmbientSound() {
+   ── IF YOU ARE HERE TO GIVE HQ ITS MUSIC BACK, READ THIS FIRST ────────────
+   This has been changed twice and the argument on each side is real, so it is
+   one line on purpose. Emptying this array gives Kitchen HQ music again.
+
+   The case for silence is §28: an hour of ambient loops while you are costing
+   a menu is noise, not atmosphere.
+
+   The case against is who actually lands here. The Kitchen Lead is redirected
+   to /hq the moment they sign in, so with HQ silent the person who runs the
+   camp may never hear the product's music at all — and with no control in the
+   HQ header, has no way to ask for it. That is why session 2 put sound in HQ,
+   and it is a fair point rather than an oversight. Session 3 chose silence
+   again, with the product owner deciding explicitly.
+
+   Whichever way this goes, change it here and nowhere else. */
+const SILENT_AREAS = ["/hq"];
+
+/* Any of these counts as the gesture a browser is waiting for.
+
+   The list is deliberately wide and deliberately includes events that overlap.
+   `pointerdown` is what fires first on a desktop click, but iOS Safari does
+   NOT grant playback permission on a touch *start* — it wants `touchend` or
+   the `click` that follows. A camp of people on phones is the main audience,
+   so leaving those out meant the music could never begin on the device most
+   members hold. Listening to all of them costs nothing: whichever arrives
+   first starts the music, and the rest find it already playing. */
+const GESTURES = [
+  "pointerdown",
+  "pointerup",
+  "click",
+  "keydown",
+  "touchstart",
+  "touchend",
+] as const;
+
+/* ── WHY THIS IS A PROVIDER AND NOT ONE SELF-CONTAINED COMPONENT ───────────
+   The player used to be mounted three times — once in the welcome poster,
+   once in the camp header, once in Kitchen HQ — which meant the <audio>
+   element was destroyed and rebuilt on every crossing between them. Every
+   rebuild needed a fresh play(), and a fresh play() is a fresh chance for the
+   browser to refuse: a member who had music on the welcome screen could walk
+   through the door and arrive in silence.
+
+   So the sound now lives in the ROOT layout, above every route, and never
+   unmounts for as long as the tab is open. Client navigation cannot interrupt
+   it, there is nothing to resume because nothing stopped, and permission won
+   once is permission kept.
+
+   The button still has to appear inside each header, which is why the two are
+   separate: `AmbientSoundProvider` owns the audio and the state, `SoundToggle`
+   is the control and can be dropped wherever a header wants it. */
+const SoundContext = createContext<{
+  on: boolean;
+  blocked: boolean;
+  toggle: () => void;
+} | null>(null);
+
+export function AmbientSoundProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  /* Kitchen HQ is silent on purpose (Design Book §28): the Lead may sit in
+     there for an hour costing a menu, and an hour of ambient music while you
+     are concentrating is not atmosphere, it is noise.
+
+     Silence here is a PAUSE, never an "off". The member never said they
+     wanted quiet — they walked into a different room — so their preference is
+     untouched and the camp is playing again the moment they walk back out,
+     from exactly where it got to. */
+  const pathname = usePathname();
+  const silent = SILENT_AREAS.some((area) => pathname?.startsWith(area));
 
   const targetRef = useRef(0);
   const rateRef = useRef(LEVEL / FADE_IN_MS); /* volume units per millisecond */
@@ -128,8 +209,6 @@ export function AmbientSound() {
      button and concluded the music was broken, when one tap would have started
      it. The button now says so. */
   const [blocked, setBlocked] = useState(false);
-  /* The member waved the invitation away. Their call, for this visit. */
-  const [dismissed, setDismissed] = useState(false);
 
   /* Always clears the handle as well as the timer. Leaving a stale handle
      behind is not a tidiness point: `ensureLoop` treats a non-null handle as
@@ -195,31 +274,56 @@ export function AmbientSound() {
 
   /* Wait for the member's first interaction anywhere, then start. This is the
      only way audible playback can begin on a first visit — browsers require a
-     gesture, and treat one click on the page as consent for the whole page.
-     It fires once and then unhooks itself. */
+     gesture, and treat one interaction on the page as consent for the rest of
+     it.
+
+     ── THE BUG THIS SHAPE EXISTS TO PREVENT ─────────────────────────────────
+     This used to register with `{ once: true }` and bail out early on taps
+     that landed on the sound control. Those two decisions are fine apart and
+     fatal together: an ignored tap had ALREADY spent the one-shot listener, so
+     the bridge went permanently dead without ever starting anything. The
+     invitation banner made it near-certain — its container was full-bleed
+     (`inset-x-0`), so every click in a 43px strip across the whole width of
+     the screen counted as "a tap on our own controls" and quietly burned the
+     listener. Measured in Chrome: click in that strip and the music could
+     never start again, no matter where you clicked afterwards.
+
+     So the listener now STAYS ARMED until playback actually succeeds. Being
+     armed is free — an idle event listener costs nothing — while being
+     disarmed one moment too early costs the member the entire soundtrack.
+     Nothing here disarms on the way past; only `play()` resolving does, and a
+     `play()` that rejects leaves it armed to try again on the next touch. */
   const armGesture = useCallback(() => {
     if (disarmRef.current) return;
 
     const fire = (event: Event) => {
-      /* Ignore taps on our own controls. The listener runs on pointerdown and
-         the button's onClick runs afterwards: without this, one tap on the
-         sound button turns the music ON here and then straight back OFF in
-         toggle(), which sees `on` already true. The control appeared dead —
-         the harder you tapped it, the more reliably nothing happened. */
+      /* Taps on our own button belong to toggle(), which runs on click just
+         after this. Starting the music here too would turn it on and then
+         straight back off. Ignore it — but STAY ARMED, because this member
+         has not heard anything yet. */
       const target = event.target as HTMLElement | null;
       if (target?.closest?.("[data-sound-control]")) return;
+      if (!wantedRef.current) return;
 
-      disarmGesture();
-      if (wantedRef.current) setOn(true);
+      /* Already on? React bails on an unchanged value, so the play effect
+         does not re-run and this costs nothing. */
+      setOn(true);
     };
 
+    /* Capture phase: a gesture is consent for the page whether or not the
+       component that received it lets the event bubble. Anything that calls
+       stopPropagation() — a menu, a form control, a card that swallows its
+       own clicks — would otherwise hide the member's only qualifying
+       interaction from us. */
     for (const type of GESTURES) {
-      window.addEventListener(type, fire, { once: true, passive: true });
+      window.addEventListener(type, fire, { capture: true, passive: true });
     }
     disarmRef.current = () => {
-      for (const type of GESTURES) window.removeEventListener(type, fire);
+      for (const type of GESTURES) {
+        window.removeEventListener(type, fire, { capture: true });
+      }
     };
-  }, [disarmGesture]);
+  }, []);
 
   /* Decide what this visit should do, then try it. */
   useEffect(() => {
@@ -256,7 +360,21 @@ export function AmbientSound() {
       /* Unparseable or unavailable — start from the top, no harm done. */
     }
 
+    /* Start fetching now, while the member is still reading the page, so the
+       first gesture lands on a track that is ready to sound instead of one
+       that still has to be downloaded. Only for members who want sound —
+       somebody who switched it off should not pay for 2 MB they asked not to
+       hear, least of all on desert mobile data. */
+    if (wants && !silent && audioRef.current) {
+      audioRef.current.preload = "auto";
+    }
+
     if (wants) setOn(true);
+    /* `silent` is read once, on mount, purely to decide whether to spend
+       bandwidth. It is deliberately not a dependency: this effect establishes
+       what the member wants and must run exactly once. Moving between the camp
+       and HQ afterwards is handled by the playback effect below. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* Remember the position on the way out. Client-side navigation unmounts us
@@ -288,6 +406,22 @@ export function AmbientSound() {
     const el = audioRef.current;
     if (!el || !on) return;
 
+    /* Walked into Kitchen HQ. Fade the camp down and hold — do not touch the
+       member's preference, do not rewind, do not reload. `on` stays true, so
+       stepping back out re-runs this effect and the music picks up on the same
+       bar it was on when the door closed. */
+    if (silent) {
+      targetRef.current = 0;
+      rateRef.current = LEVEL / FADE_OUT_MS;
+      pauseAtZeroRef.current = true;
+      ensureLoop();
+      return;
+    }
+
+    /* Coming back from HQ the element is paused mid-track with its buffer
+       intact, and already at volume 0 from the fade-out — so this one line
+       covers both cases: a new track lifts from silence, and a returning one
+       lifts from the silence it was left in, on the bar it stopped at. */
     el.volume = 0;
     targetRef.current = LEVEL;
     rateRef.current = LEVEL / FADE_IN_MS;
@@ -325,12 +459,20 @@ export function AmbientSound() {
         /* Autoplay refused. No amount of code gets around that: browsers
            require a gesture before a page may make noise. Silence is what is
            actually happening, so the button must not claim otherwise — but it
-           must also not look like the member switched it off, because the fix
-           is one tap and they need to know that. */
+           must also not look like the member switched it off, because the
+           music arrives on its own the moment they touch anything.
+
+           Stay armed. A refusal is not a verdict, it is "not yet": the member
+           has not interacted with the page *yet*, and the next thing they do
+           is the thing that starts the camp. Giving up here is what left the
+           product silent for a whole visit. */
         setOn(false);
-        if (wantedRef.current) setBlocked(true);
+        if (wantedRef.current) {
+          setBlocked(true);
+          armGesture();
+        }
       });
-  }, [on, index, ensureLoop, armGesture, disarmGesture]);
+  }, [on, index, silent, ensureLoop, armGesture, disarmGesture]);
 
   useEffect(() => {
     return () => {
@@ -357,7 +499,6 @@ export function AmbientSound() {
          next click would turn the music straight back on. */
       wantedRef.current = false;
       setBlocked(false);
-      setDismissed(true);
       disarmGesture();
       try {
         sessionStorage.setItem(STORAGE_KEY, "off");
@@ -372,6 +513,70 @@ export function AmbientSound() {
     }
   }
 
+  return (
+    <SoundContext.Provider value={{ on, blocked, toggle }}>
+      {children}
+
+      {/* THERE IS NO "TAP TO PLAY" INVITATION HERE, AND THERE MUST NOT BE ONE.
+
+          One used to sit under the header: a banner reading "יש כאן מוזיקה —
+          הקישו להפעלה". It was removed on the product owner's instruction in
+          session 3, for two separate reasons, and both matter if anybody is
+          ever tempted to bring it back.
+
+          The product reason: asking somebody to press a button before the camp
+          will play to them is a worse welcome than silence. The music is meant
+          to arrive on its own, the way a room you walk into is already playing.
+          A request for permission turns a gift into a chore.
+
+          The engineering reason: it did not work. The banner was the single
+          largest cause of permanent silence in the product — its full-bleed
+          container swallowed the member's first click and killed the gesture
+          bridge with it (see `armGesture`). The screen element asking people to
+          tap was eating the taps.
+
+          `SoundToggle` in the header is the whole interface. When the browser
+          has not let the music start it breathes, which is an honest report of
+          state and not an instruction. Members do not need one: the music
+          starts by itself the moment they touch anything on the page. */}
+
+      <audio
+        ref={audioRef}
+        src={TRACKS[index]}
+        /* "auto", not "none". With "none" the file was not fetched until the
+           member's first gesture, so the moment meant to welcome them was
+           spent watching a download instead — measured at readyState 0 more
+           than two seconds after playback was supposed to have begun. The
+           track has to be ready and waiting before the gesture arrives, or the
+           gesture buys silence.
+
+           Set imperatively rather than declaratively so nothing is downloaded
+           for a member who has switched sound off — see the mount effect. */
+        preload="none"
+        onEnded={handleEnded}
+      />
+    </SoundContext.Provider>
+  );
+}
+
+/* ============================================================================
+   THE CONTROL — one button, dropped into whichever header wants it.
+
+   Deliberately absent from Kitchen HQ. HQ is silent by design (§28), so a
+   sound button in there would be a switch that promises something the room
+   does not do. The camp header and the welcome poster carry it; HQ carries
+   nothing, and the music the Lead left playing is waiting for them when they
+   walk back out.
+
+   Renders nothing at all outside the provider rather than throwing, so a
+   header can never take the whole page down over a music button.
+   ========================================================================= */
+export function SoundToggle() {
+  const ctx = useContext(SoundContext);
+  if (!ctx) return null;
+
+  const { on, blocked, toggle } = ctx;
+
   const label = on
     ? "לכבות את המוזיקה"
     : blocked
@@ -379,65 +584,26 @@ export function AmbientSound() {
       : "להדליק מוזיקת רקע";
 
   return (
-    <>
-      <button
-        type="button"
-        data-sound-control
-        onClick={toggle}
-        aria-pressed={on}
-        aria-label={label}
-        title={label}
-        className={[
-          "no-print flex h-9 w-9 items-center justify-center rounded-[10px_8px_11px_9px]",
-          "border-2 transition-colors",
-          on
-            ? "border-sun text-sun"
-            : blocked
-              ? /* Waiting for a tap, not switched off. Breathes so the eye
-                   finds it, which is the whole point. */
-                "animate-breathe border-sun/70 text-sun/90"
-              : "border-charcoal-5 text-cream-dim hover:border-cream-dim hover:text-cream-2",
-        ].join(" ")}
-      >
-        <Glyph name={on || blocked ? "sound" : "silence"} strokeWidth={2} />
-      </button>
-
-      {/* An icon in the header is not an invitation. When the browser has
-          refused and the music is sitting there unplayed, say so in words
-          somebody will actually notice — one tap and the camp comes on.
-          Disappears the moment it plays, and can be waved away. */}
-      {blocked && !dismissed && (
-        <div
-          data-sound-control
-          className="no-print fixed inset-x-0 top-[62px] z-50 flex justify-center px-4"
-        >
-          <div className="flex items-center gap-2.5 rounded-[12px_15px_11px_14px] border-2 border-sun bg-charcoal-2/95 px-3 py-2 shadow-[3px_4px_0_0_var(--color-ink)] backdrop-blur-sm">
-            <button
-              type="button"
-              onClick={toggle}
-              className="flex items-center gap-2 text-[13.5px] font-medium text-sun"
-            >
-              <Glyph name="sound" strokeWidth={2.2} />
-              יש כאן מוזיקה — הקישו להפעלה
-            </button>
-            <button
-              type="button"
-              onClick={() => setDismissed(true)}
-              aria-label="לא עכשיו"
-              className="flex h-6 w-6 items-center justify-center rounded-full text-cream-dim transition-colors hover:text-cream"
-            >
-              <Glyph name="cross" strokeWidth={2.4} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      <audio
-        ref={audioRef}
-        src={TRACKS[index]}
-        preload="none"
-        onEnded={handleEnded}
-      />
-    </>
+    <button
+      type="button"
+      data-sound-control
+      onClick={toggle}
+      aria-pressed={on}
+      aria-label={label}
+      title={label}
+      className={[
+        "no-print flex h-9 w-9 items-center justify-center rounded-[10px_8px_11px_9px]",
+        "border-2 transition-colors",
+        on
+          ? "border-sun text-sun"
+          : blocked
+            ? /* Waiting for a tap, not switched off. Breathes so the eye
+                 finds it, which is the whole point. */
+              "animate-breathe border-sun/70 text-sun/90"
+            : "border-charcoal-5 text-cream-dim hover:border-cream-dim hover:text-cream-2",
+      ].join(" ")}
+    >
+      <Glyph name={on || blocked ? "sound" : "silence"} strokeWidth={2} />
+    </button>
   );
 }

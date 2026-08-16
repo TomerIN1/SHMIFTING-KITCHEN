@@ -2,9 +2,85 @@
 
 **Immediate handover. Read this second, after `project_summary.md` (CLAUDE.md §0.1).**
 
-Written at the end of session 2, 2026-08-16. Session 2 was long: the product
-went from a local prototype to a deployed camp with a real member, a live vote,
-and money in it.
+Written at the end of session 2, 2026-08-16, and amended during session 3 the
+same day. Session 2 was long: the product went from a local prototype to a
+deployed camp with a real member, a live vote, and money in it. Session 3 has
+so far only fixed the music — the budget work below is still the plan and has
+not been started.
+
+---
+
+## 0. WHAT SESSION 3 DID SO FAR — THE MUSIC
+
+The camp owner reported that opening the app in Chrome produced no music, and
+asked for it to start on its own: *"the user needs to feel that the music starts
+to play welcoming him."*
+
+It was **not** only the browser autoplay policy. There was a real bug, found by
+instrumenting a real Chrome:
+
+> The "יש כאן מוזיקה — הקישו להפעלה" banner was **eating the very click that
+> would have started the music.** Its container was `inset-x-0`, so any click in
+> a 43px strip across the entire width of the screen was treated as "a tap on
+> our own controls" and skipped — and because the gesture listeners were
+> registered `{ once: true }`, that skipped click had already consumed them. One
+> click near the top of the page and the music could never start again, however
+> much the member clicked afterwards.
+
+Fixed in `components/shmifting/AmbientSound.tsx` and its mount points:
+
+1. **The banner is gone**, on the owner's instruction. No "tap to play"
+   affordance may be reintroduced — see `project_summary.md` §7.
+2. **The gesture bridge stays armed** until playback actually succeeds, and
+   re-arms on every refusal. Listeners are in the capture phase.
+3. **`click`, `pointerup`, `touchend` added** to the gesture list. iOS Safari
+   does not grant permission on `touchstart`, and the camp is on phones.
+4. **`preload="auto"`** for members who want sound, so the first gesture lands
+   on a track that is ready instead of one still downloading.
+5. **The player was hoisted into the root layout** (`AmbientSoundProvider`),
+   split from its button (`SoundToggle`). It used to be mounted three times, so
+   the audio element was rebuilt on every crossing and each rebuild could be
+   refused afresh. Verified in Chrome: the element now survives client
+   navigation intact.
+6. **Kitchen HQ is silent again** (`SILENT_AREAS`), by the owner's explicit
+   choice, reversing session 2. Entering HQ fades down and pauses mid-track;
+   leaving resumes on the same bar. No sound button in the HQ header.
+
+### What was verified, and what was not
+
+Verified in the owner's real Chrome: the blocked state, then **one** real click
+anywhere → `play()` called → `paused: false` and the button flips to
+"לכבות את המוזיקה"; the audio element surviving `/` → `/hq` → `/` intact; HQ
+paused at volume 0; resume on return. `npm run typecheck` and `npm run build`
+both pass.
+
+**Not verified: that sound is audible.** Media elements stall at `readyState 0`
+in a Chrome driven over the DevTools Protocol — see the new gotchas in
+`project_summary.md` §8. The file itself was proved healthy (correct atom order,
+decodes via `decodeAudioData`, and Playwright's Chromium streams it to
+`readyState 4`). **Someone should open the site normally and listen.**
+
+### The honest limit, which no code removes
+
+Chrome will not permit audible playback in a document that has never received a
+user gesture, unless the origin has accumulated enough **Media Engagement**. So
+on a genuine cold load the music starts at the member's first touch — not
+before. Two things make that nearly invisible: signing in is itself a click, and
+the player no longer unmounts, so a new member's sign-in starts the music on
+`/welcome` and it plays straight through into Home. And because Chrome raises
+Media Engagement for origins where audio actually plays for more than a few
+seconds, repeat visits to the production domain do begin to autoplay outright.
+
+### Left open
+
+- **The Kitchen Lead lands on `/hq` at sign-in.** With HQ silent, the owner —
+  who lives in HQ — hears nothing unless they cross to the camp side. That is
+  exactly why session 2 put music in HQ. The decision was made knowingly; if it
+  feels wrong in use, emptying `SILENT_AREAS` reverses it in one line.
+- **Not deployed.** The fix is committed to the working tree only; production
+  still has the banner and the old bridge.
+- **Still no test suite.** This bug lived in DOM/event wiring, which
+  `lib/domain/*` tests would not have caught.
 
 ---
 

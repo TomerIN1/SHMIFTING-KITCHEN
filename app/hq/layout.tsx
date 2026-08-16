@@ -3,7 +3,6 @@ import { requireAdmin } from "@/lib/auth/guard";
 import { HqSidebar, HqTabs } from "@/components/hq/HqNav";
 import { WordmarkLink } from "@/components/shmifting/Wordmark";
 import { UserBadge } from "@/components/shmifting/UserBadge";
-import { AmbientSound } from "@/components/shmifting/AmbientSound";
 import { Glyph } from "@/components/shmifting/Glyph";
 import { getSettings, getBreakdown, defaultDiners } from "@/lib/data/camp";
 import { getMenuStats } from "@/lib/data/menu";
@@ -101,12 +100,13 @@ export default async function HqLayout({ children }: LayoutProps<"/hq">) {
               </span>
             )}
 
-            {/* HQ used to be silent on the theory that the Lead sits here for
-                an hour. In practice the Lead lands here at sign-in, so silent HQ
-                meant the product had no music at all for them — and no button to
-                ask for it. It is one click to turn off, and that choice sticks. */}
-            <AmbientSound />
+            {/* No sound control here on purpose. Kitchen HQ is silent (Design
+                Book §28) and the player enforces that itself — see SILENT_AREAS
+                in AmbientSound. A button in this header would be a switch that
+                promises something the room deliberately does not do.
 
+                The music is not stopped, only held: whatever was playing on the
+                camp side is paused mid-bar and resumes there on the way back. */}
             <UserBadge user={user} context="hq" />
           </div>
         </div>

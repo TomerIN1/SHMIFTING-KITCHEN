@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Heebo, Suez_One } from "next/font/google";
 import "./globals.css";
 import { ShmiftingDefs } from "@/components/shmifting/ShmiftingDefs";
+import { AmbientSoundProvider } from "@/components/shmifting/AmbientSound";
 
 /* Design Book §32: "A beautiful Latin typeface that produces poor Hebrew is
    unacceptable." Both faces below were designed with Hebrew, not extended to
@@ -43,7 +44,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <ShmiftingDefs />
-        {children}
+        {/* The music lives here, above every route, so that moving between the
+            door, the camp and Kitchen HQ never unmounts it. A player that
+            unmounts has to ask the browser for permission again on the other
+            side, and the browser is entitled to say no — which is how a member
+            used to lose the soundtrack simply by signing in. */}
+        <AmbientSoundProvider>{children}</AmbientSoundProvider>
       </body>
     </html>
   );

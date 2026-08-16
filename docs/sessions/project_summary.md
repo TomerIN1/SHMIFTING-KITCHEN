@@ -193,9 +193,8 @@ warm phone spent on something they will never see.
 
 ### Ambient sound
 
-`components/shmifting/AmbientSound.tsx`, mounted in the **camp header only** —
-Kitchen HQ is silent on purpose, because the Lead may sit in there for an hour
-(Design Book §28). Three tracks from **mixkit.co**, transcoded to 112 kbps AAC
+`components/shmifting/AmbientSound.tsx`. Three tracks from **mixkit.co**,
+transcoded to 112 kbps AAC
 (`public/audio/shmift-0{1,2,3}.m4a`, 12.8 MB of source mp3 → 6.0 MB). The
 mp3 originals are committed in `music-clip-shmifting/`.
 
@@ -206,18 +205,70 @@ otherwise; §51 has not been amended, so raise it with a human before changing
 it back. Everything else in §51 is still obeyed literally: one button, no
 player chrome, and nothing in the product gated behind audio.
 
-**Browsers will not allow audible autoplay on a first visit**, whatever the
-default says — so the component tries immediately, and if it is refused it arms
-a one-shot listener for the member's first `pointerdown`/`keydown`/`touchstart`
-anywhere on the page and starts then. That gesture bridge is the only way
-sound can begin on a first visit; there is no code that gets around it.
+**It is one player in the root layout, not one per shell.** `app/layout.tsx`
+wraps everything in `AmbientSoundProvider`, which owns the `<audio>` element;
+`SoundToggle` is the button and is dropped into the camp header and the welcome
+poster. They were split in session 3. Before that the component was mounted
+three times — welcome, camp, HQ — so the element was destroyed and rebuilt on
+every crossing, and each rebuild needed a fresh `play()` that the browser was
+entitled to refuse. A member could have music on the welcome screen and arrive
+in silence one click later. Verified in Chrome: the audio element now survives
+client navigation intact, so permission won once is permission kept.
 
-The preference is a localStorage key (`shmifting:sound`) — a per-device comfort
-setting, not camp data. Three states, and the distinction matters: **unset**
-means never asked, so the default applies; **"on"** and **"off"** are the
-member's own words and are always honoured. Turning it off also disarms the
+**Kitchen HQ is silent** (Design Book §28), enforced by `SILENT_AREAS` in
+`AmbientSound.tsx` — one array, deliberately. Entering HQ fades the music down
+and pauses it mid-track; leaving resumes on the same bar. The member's
+preference is never touched, because they did not ask for quiet, they walked
+into a different room. There is no sound button in the HQ header, since it
+would promise something the room does not do. **This has now been changed
+twice** — session 2 gave HQ music because the Kitchen Lead is redirected to
+`/hq` at sign-in and would otherwise never hear the product at all; session 3
+chose silence again, with the product owner deciding explicitly. Both arguments
+are written out at `SILENT_AREAS`. Read them before changing it a third time.
+
+**Browsers will not allow audible autoplay on a first visit**, whatever the
+default says. There is no code that gets around it — Chrome requires a user
+gesture in that document, or enough accumulated Media Engagement for the
+origin. So the component tries immediately, and if it is refused it listens for
+the member's first interaction anywhere and starts then.
+
+Three things about that gesture bridge are load-bearing, and all three were bugs
+found in session 3:
+
+- **It stays armed until playback actually succeeds.** It used to register with
+  `{ once: true }` *and* ignore taps that landed on its own controls. Each is
+  fine alone and fatal together: an ignored tap had already spent the one-shot
+  listener, so the bridge died without ever starting anything.
+- **There is no "tap to play" banner, and there must not be one.** The old one
+  was the single largest cause of silence in the product. Its container was
+  `inset-x-0`, so every click in a 43px strip across the full width of the
+  screen counted as "a tap on our own controls" and quietly burned the
+  listener. Measured in Chrome: click in that strip and the music could never
+  start again. The element asking people to tap was eating the taps.
+- **The gesture list includes `click`, `pointerup` and `touchend`**, not just
+  `pointerdown`/`touchstart`. iOS Safari does not grant playback permission on
+  a touch *start*, and phones are what this camp actually uses. Listeners are
+  registered in the capture phase so a component calling `stopPropagation()`
+  cannot hide the member's one qualifying interaction.
+
+`preload` is set to `"auto"` on mount for members who want sound, and left at
+`"none"` for members who switched it off. With `"none"` the track was not
+fetched until the gesture arrived, so the moment meant to welcome somebody was
+spent on a download instead.
+
+The preference is a **sessionStorage** key (`shmifting:sound`) — a per-visit
+comfort setting, not camp data. Three states, and the distinction matters:
+**unset** means never asked, so the default applies; **"on"** and **"off"** are
+the member's own words and are always honoured. Turning it off also disarms the
 pending gesture listener, or their very next click would restart the music they
 just silenced.
+
+**Silence lasts the visit, not forever.** It was localStorage once, and that
+turned one curious tap into permanent silence on that device with no way for
+the member to discover why. Ambient sound in a room does not work that way: you
+can ask for quiet, and next time you walk in the room is playing again.
+`shmifting:sound:at` (also sessionStorage) carries the track and position
+across a hard reload, within a 90 s window.
 
 **Tracks play one at a time, each to its own natural ending.** No cross-fade and
 no early fade-out: these pieces are written to resolve, and cutting the tail is
@@ -367,6 +418,8 @@ on a generator.
 - **An empty meal reports zero conflicts**, not "everyone is blocked". A meal with no dishes is a different problem, reported by a different check.
 - **Motion is optional.** If `public/motion/*.mp4` is absent, the still poster is the whole experience.
 - **Sound is ON by default** — an explicit product-owner override of Design Book §51's "no aggressive autoplay". §51 was NOT amended, so the code and the book disagree on purpose. Do not reconcile them by changing the code; ask a human.
+- **No "tap to enable music" affordance may be added.** Decided by the product owner in session 3: asking permission before the camp will play turns a gift into a chore. The music arrives on its own at the member's first interaction. The header button is the entire interface. See §5.
+- **Kitchen HQ is silent**, re-decided by the product owner in session 3 after session 2 had reversed it. One array, `SILENT_AREAS`. Both arguments are recorded there.
 - **Voting is one round of whole evenings, not a round per cuisine.** Two more elaborate models were built and deleted; the reasoning is in §6B and is worth reading before reintroducing either.
 - **The vote is the decision, not an input to one.** Six flames, one per evening, so the tally IS the menu. This is why `maxPerOption` exists.
 - **Equipment is not a shopping category.** It is its own table for reasons listed in §6B.
@@ -378,6 +431,27 @@ on a generator.
 ## 8. GOTCHAS
 
 - **Tailwind v4 cannot see computed class names.** `accents.ts` writes every class out in full. Never build one with string interpolation or `.replace()` — that bug shipped once already.
+- **Playwright cannot reproduce an autoplay bug.** Its Chromium launches with
+  the autoplay policy disabled: `navigator.userActivation.hasBeenActive` is
+  `true` before anything is clicked and audio plays on load. It will report
+  success no matter how broken the gesture handling is. Anything about autoplay
+  has to be checked in a real Chrome. The reverse trap also exists — a
+  backgrounded Playwright page *does* block autoplay, because Chrome refuses it
+  in hidden tabs, which looks like a bug and is not.
+- **Watch for a foreign service worker on `localhost:3001`.** Another project on
+  this machine registers one at that scope with a Workbox precache, and it will
+  serve *its* app on our port and intercept our requests — session 3 lost time
+  to a page titled "אלפי - עולם האלף-בית" being served from our dev server.
+  Check `navigator.serviceWorker.getRegistrations()` before believing anything
+  strange on that origin, and unregister it.
+- **Media elements can stall while `fetch()` of the same URL is instant.** When
+  Chrome is being driven over the DevTools Protocol, `<audio>` may sit at
+  `readyState 0` / `networkState 2` and fire `stalled`, on both dev and
+  production, while `fetch()` returns the whole 1.5 MB file in 15 ms and
+  `decodeAudioData()` decodes it fine. That is instrumentation interference,
+  not a broken asset. To prove an audio file is healthy, parse its atom order
+  (`ftyp/moov/free/mdat` — `moov` must come before `mdat` for progressive
+  playback) and decode it, rather than trusting the element.
 - **Never drive audio volume from `requestAnimationFrame`.** rAF stops in a hidden tab, and a hidden tab is where background music actually lives — a track that ended in another tab would come back playing at volume 0. `AmbientSound` uses a `setInterval` loop with `dt` clamped to 1 s so a throttled tick still carries a real slice of the fade. Related: a cleanup that calls `cancelAnimationFrame` **must also null the stored handle**, or the "is the loop running?" guard stays true forever and the loop never restarts. React's dev double-mount triggers exactly that, and it cost an hour.
 - **`server-only` breaks standalone `tsx` scripts.** Anything importing `lib/data/*` only runs inside Next. Verify domain logic through the browser, or write a script against `lib/domain/*` (pure) instead.
 - **Ingredient cost is quoted per `ingredients.defaultUnit`.** Aggregation may land on a different unit in the same dimension (500 g rather than 0.5 kg). `convertUnitCost()` restates the price. Skipping it produced a ₪39,894 projection instead of ~₪1,600.
