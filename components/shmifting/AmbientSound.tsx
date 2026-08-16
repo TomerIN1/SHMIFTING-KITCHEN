@@ -128,6 +128,8 @@ export function AmbientSound() {
      button and concluded the music was broken, when one tap would have started
      it. The button now says so. */
   const [blocked, setBlocked] = useState(false);
+  /* The member waved the invitation away. Their call, for this visit. */
+  const [dismissed, setDismissed] = useState(false);
 
   /* Always clears the handle as well as the timer. Leaving a stale handle
      behind is not a tidiness point: `ensureLoop` treats a non-null handle as
@@ -198,7 +200,15 @@ export function AmbientSound() {
   const armGesture = useCallback(() => {
     if (disarmRef.current) return;
 
-    const fire = () => {
+    const fire = (event: Event) => {
+      /* Ignore taps on our own controls. The listener runs on pointerdown and
+         the button's onClick runs afterwards: without this, one tap on the
+         sound button turns the music ON here and then straight back OFF in
+         toggle(), which sees `on` already true. The control appeared dead —
+         the harder you tapped it, the more reliably nothing happened. */
+      const target = event.target as HTMLElement | null;
+      if (target?.closest?.("[data-sound-control]")) return;
+
       disarmGesture();
       if (wantedRef.current) setOn(true);
     };
@@ -347,6 +357,7 @@ export function AmbientSound() {
          next click would turn the music straight back on. */
       wantedRef.current = false;
       setBlocked(false);
+      setDismissed(true);
       disarmGesture();
       try {
         sessionStorage.setItem(STORAGE_KEY, "off");
@@ -371,6 +382,7 @@ export function AmbientSound() {
     <>
       <button
         type="button"
+        data-sound-control
         onClick={toggle}
         aria-pressed={on}
         aria-label={label}
@@ -389,6 +401,36 @@ export function AmbientSound() {
       >
         <Glyph name={on || blocked ? "sound" : "silence"} strokeWidth={2} />
       </button>
+
+      {/* An icon in the header is not an invitation. When the browser has
+          refused and the music is sitting there unplayed, say so in words
+          somebody will actually notice — one tap and the camp comes on.
+          Disappears the moment it plays, and can be waved away. */}
+      {blocked && !dismissed && (
+        <div
+          data-sound-control
+          className="no-print fixed inset-x-0 top-[62px] z-50 flex justify-center px-4"
+        >
+          <div className="flex items-center gap-2.5 rounded-[12px_15px_11px_14px] border-2 border-sun bg-charcoal-2/95 px-3 py-2 shadow-[3px_4px_0_0_var(--color-ink)] backdrop-blur-sm">
+            <button
+              type="button"
+              onClick={toggle}
+              className="flex items-center gap-2 text-[13.5px] font-medium text-sun"
+            >
+              <Glyph name="sound" strokeWidth={2.2} />
+              יש כאן מוזיקה — הקישו להפעלה
+            </button>
+            <button
+              type="button"
+              onClick={() => setDismissed(true)}
+              aria-label="לא עכשיו"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-cream-dim transition-colors hover:text-cream"
+            >
+              <Glyph name="cross" strokeWidth={2.4} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <audio
         ref={audioRef}
